@@ -12,4 +12,13 @@ This product includes software adapted from:
   midnightntwrk/example-private-party — https://github.com/midnightntwrk/example-private-party
   Copyright (C) Midnight Foundation. Licensed under the Apache License, Version 2.0.
   Adapted: DUST fee sponsorship flow and HTTP service (chain/src/relay/fee-key-relay.ts),
-  copied: chain/src/wallet.ts, chain/src/config.ts, chain/compose.yml.
+  copied: chain/src/wallet.ts, chain/compose.yml; adapted: chain/src/config.ts (Preprod on Blockfrost).
+
+Fonts (self-hosted in ui/src/fonts, latin and latin-ext subsets), SIL Open Font License 1.1:
+  - Libre Caslon Text and Libre Caslon Display, Copyright Impallari Type
+  - Schibsted Grotesk, Copyright The Schibsted Grotesk Project Authors
+  - Reenie Beanie, Copyright James Grieshaber
+  License text: https://openfontlicense.org/open-font-license-official-text/
+
+The e2e/ test project was scaffolded with `npx e2e init` (e2e by TesterArmy, open source);
+e2e/.agents/skills/e2e is that tool's generated agent guide.

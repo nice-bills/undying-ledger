@@ -33,5 +33,5 @@ run at an app you serve yourself; `E2E_SITE_DIR` serves another folder (e.g. `..
 ## Agent steps
 
 Set `AI_GATEWAY_API_KEY` (Vercel AI Gateway) or swap the model in `e2e.config.ts` (see
-https://e2e.tester.army/docs/models). `E2E_MODEL` overrides the model id. Telemetry was
-disabled on the build machine with `npx e2e telemetry disable`.
+https://e2e.tester.army/docs/models). `E2E_MODEL` overrides the model id. e2e sends anonymous usage telemetry by default; opt out with
+`E2E_TELEMETRY_DISABLED=1` or `npx e2e telemetry disable` (CI sets the variable).

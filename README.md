@@ -6,7 +6,9 @@ Undying Ledger is a private record book for village savings and loan association
 
 Built for the AKINDO Midnight Buildathon, Wave 2.
 
-> **Try it:** open `docs/index.html` from this repo through any static server (`npx serve docs`), or enable GitHub Pages on `main` → `/docs`. The demo runs the **real compiled Compact circuits** in your browser through `@midnight-ntwrk/compact-runtime`. It needs no wallet, no network and no tokens.
+![The six beats of the demo: meeting 12, Ama's passbook, the husband's phone, sunset, meeting 13, the proof slip](media/strip.jpg)
+
+**Try it:** serve `docs/` with any static server (`npx serve docs`), or enable GitHub Pages (see [Deploying the demo](#deploying-the-demo)). The demo runs the **real compiled Compact circuits** in your browser through `@midnight-ntwrk/compact-runtime`. It needs no wallet, no network and no tokens. A one-minute recording of the built app is in [`media/demo.mp4`](media/demo.mp4).
 
 ---
 
@@ -32,14 +34,50 @@ Built for the AKINDO Midnight Buildathon, Wave 2.
 
 Other chains fall short. Celo fee abstraction still needs the user to hold cUSD, and every record is public. An Ethereum paymaster deposit gets spent down, and a published gas key is drained within seconds. Aztec and Aleo have private state, but their fees are consumed rather than regenerated, so there is no fee key that is safe to share.
 
-## What is in this repo
+## The demo, in six beats
+
+The UI is a printed VSLA passbook ("A2 Passbook"): cloth covers that change colour with each beat, deckled ivory leaves, rubber stamps with uneven ink, carbon slips, a ballpoint that ticks the members off, and an amber light that leans across the page only while the vendor's grace period runs down. Every figure on screen comes from `DemoEngine` running the compiled circuits; nothing is hard-coded.
+
+| # | Beat | What actually runs |
+|---|---|---|
+| 1 | **Fuseina records meeting 12** (bottle-green minute book) | `recordMeeting` re-commits all 5 passbooks; every member’s phone checks its stamp against the new commitment. The receipt says the group fee key paid and members paid nil. |
+| 2 | **Ama’s passbook** (oxblood) | Line 12 prints in: 26 → 29 shares (GH₵290), her GH₵150 loan is cleared, and the stamp is verified against the on-chain commitment with the group secret. |
+| 3 | **Her husband’s phone** (slate) | Only public state: 5 member keys, 12 meetings, one sealed commitment per slot, no SMS. “Try to open slot 0” runs the stamp check with a guessed group secret and the exact figures, and fails. |
+| 4 | **The grant ends** (dusk) | The vendor’s heartbeats stop. Calling `sunset()` early is refused by the contract (“The maintainer is still sending heartbeats”). After the grace period, any member calls it; the vendor key is erased. |
+| 5 | **Meeting 13 still records** | `recordMeeting` with no vendor and no admin key; the fee comes off the group fee key gauge. |
+| 6 | **Prove savings, keep the amount** (blue security paper) | `attestSavings` proves “at least 30 shares” for a loan officer. Asking for 33 when she holds 32 is refused by the circuit, and the slip is withdrawn. |
+
+Also in the app: a **fee key page** (a relative points their NIGHT’s DUST at the key, a leaked key burns DUST but cannot write the book, time refills it, rotation starts a fresh key), **Terms** and **Privacy** pages, and a read-only **live register** for a group deployed on Preprod (`#/live`).
+
+The simulator makes no zero-knowledge proofs, so the proving skeletons stay up for a short fixed time and say so. Once real proof times are measured on Preprod they appear in those notes (see [PREPROD.md](PREPROD.md)).
+
+## Architecture
 
 ```
-contract/   undying.compact (8 circuits) + witnesses + a no-wallet simulator + 20 unit tests
-ui/         React + Vite demo (simulator mode, no wallet), mobile-friendly; 2 story tests
-chain/      Preprod wiring: Midnight.js 4.1.1 deploy/join/call, Lace connector (copied from
-            example-bboard), and the group fee-key relay (adapted from example-private-party)
-docs/       the static build of ui/ (GitHub Pages / IPFS-ready)
+contract/   undying.compact (8 circuits, Compact 0.31.1) + witnesses + a no-wallet simulator + 20 unit tests
+ui/         React 19 + Vite. src/demo: DemoEngine (simulator), fee-key model, measured.ts
+            src/beats: the six beats; src/a2: paper, stamps, pen and motion; src/pages: fee key, Terms, Privacy
+            src/lace: the Preprod live register (lazy-loaded, ships Midnight.js only when opened)
+chain/      Preprod wiring: Midnight.js 4.1.1 deploy/join/call, Lace providers (payFees:false),
+            the group fee-key relay, deploy and measure scripts. Preprod via Blockfrost.
+e2e/        TesterArmy e2e suite: the six-beat story and the refusals at 390x844 and 430x932
+docs/       the static build of ui/ for GitHub Pages (relative paths)
+media/      demo.mp4, six screenshots, record-demo.mjs
+scripts/    preprod.sh: one command from clone to a measured Preprod deployment
+```
+
+```
+ member phone (Ama)             secretary phone (Fuseina)            anyone
+ ───────────────────            ─────────────────────────            ──────
+ private state:                 private state:                       public ledger:
+  her key, group secret,         her key, group secret,               member keys, meeting count,
+  her own passbook               every passbook                       one commitment per slot,
+        │                              │                              heartbeat time, phase,
+        │ attestSavings(≥N)            │ recordMeeting(page, 5 entries) fee-key epoch, attestations
+        ▼                              ▼                                     ▲
+   local proof server ──proof──▶ Midnight (Preprod) ◀──fee in DUST── group fee-key relay
+   (localhost:6300)                     │                         (one shared DUST key per group,
+                                        └─ sunset(): anyone, after the grace period
 ```
 
 ### The contract (`contract/src/undying.compact`)
@@ -48,7 +86,7 @@ The contract was compiled with **Compact toolchain 0.31.1** (`pragma language_ve
 
 | Circuit | Who | What it does | k (rows) |
 |---|---|---|---|
-| `constructor` | NGO / vendor | Creates the group: up to 10 member keys, secretary, maintainer, group-secret tag, first fee-key tag, grace period. Pre-commits all 10 passbooks to zero. | – |
+| `constructor` | NGO / vendor | Creates the group: up to 10 member keys, secretary, maintainer, group-secret tag, first fee-key tag, grace period. Pre-commits all 10 passbooks to zero. | n/a |
 | `recordMeeting(page, entries[5])` | secretary | For each of 5 slots: opens the old passbook commitment, applies the entry (shares, social fund, loan issued, loan repaid; no over-repayment allowed) and writes a fresh commitment. **Every slot is re-committed every meeting**, so the chain can’t tell who saved or borrowed. | 14 (11,288) |
 | `attestSavings(slot, min, nonce)` | member | Proves "I hold ≥ `min` shares" for a loan officer’s nonce without revealing the amount. | 14 (12,771) |
 | `addMember(key)` | secretary | Adds a member (max 10). Works after sunset. | 13 |
@@ -89,10 +127,12 @@ The unit tests check the raw public state. They search the ledger and every publ
 Requires Node 22+.
 
 ```bash
-npm install
-npm test                      # 20 contract tests + 2 end-to-end demo-story tests
-npm run dev                   # simulator demo at http://localhost:5173
-npm run build                 # static build -> ui/dist (copied to docs/)
+npm ci
+npm test                      # 20 contract tests + 2 demo-story tests (vitest)
+npm run typecheck             # contract, ui, chain
+npm run dev                   # the demo at http://localhost:5173
+npm run build                 # static build -> ui/dist, copied to docs/
+npm run test:e2e              # e2e suite against docs/ (cd e2e && npm ci first; see e2e/README.md)
 ```
 
 Recompile the contract. Proving keys are not committed; `compact compile` regenerates them:
@@ -103,50 +143,38 @@ compact update 0.31.1         # pin it: 0.34/0.35 target ledger 9, which is not 
 npm run compact               # -> contract/src/managed/undying (contract/, zkir/, keys/)
 ```
 
-### The demo (about 60 seconds)
+### Tests
 
-1. **Kpalsi Women’s Group, Tamale**: 5 members, 11 meetings already in the book. The status bar shows "fees paid by group fee key #1" and "members’ own DUST: 0".
-2. **Secretary** records meeting #12 (shares, social fund, a loan, repayments). The runtime executes the real `recordMeeting` circuit.
-3. **Ama’s phone** shows her passbook and every stamp, each verified against the ledger. She can prove "≥ 10 shares" to a loan officer.
-4. **Husband’s phone / public explorer** shows no SMS and only public state: commitments, counts and phase. "Try to open slot 0 without the group secret" fails.
-5. **Grant ends**: the vendor’s heartbeats stop. Trying `sunset()` early is rejected by the contract. After 90 s (or "Skip"), **anyone** calls `sunset()`.
-6. **Meeting #13 still records**, with the fee paid from the group fee key.
-7. Fee-key panel:
-   - A relative points their DUST at the key.
-   - "Key copied: burn fees" drains the meter. The book can’t be written and no value moves.
-   - "Fast-forward 1 day" refills the key.
-   - "Rotate fee key" starts a fresh key, which fills from zero.
+| Suite | Count | What |
+|---|---|---|
+| `contract/src/test/undying.test.ts` | 20 | every circuit, every refusal, raw public state searched for amounts and secrets, two groups with different balances have identically shaped public state |
+| `ui/src/demo/__tests__/engine.test.ts` | 2 | the demo story end to end on the engine; a leaked key drains fees but not the book, rotation recovers |
+| `e2e/tests/demo-flow.e2e.ts` | 4 per phone size | the six-beat story in a real browser, the refusals, Terms/Privacy/fee key, no console errors; plus an agentic smoke test that runs only with a model key |
 
-## Honest limitations
+### Deploying the demo
 
-- **Not yet run on Preprod.** The `chain/` package (deploy script, Lace providers, fee-key relay) is **typechecked against Midnight.js 4.1.1, dapp-connector-api 4.0.1 and wallet-sdk 1.2.0, but not executed**. The build machine had no Docker (so no proof server), no Lace and no tNIGHT. These are still open:
-  - Does Lace 1.36.x honour `balanceUnsealedTransaction(tx, { payFees: false })`? The API type has it, but the wallet behaviour is unconfirmed.
-  - Does a DUST wallet started from a bare secret key sync fast enough in practice? Community reports range from about 78 minutes from genesis to about 29 s from a snapshot.
-  - No real proof has been generated. The k values are from `zkir mock-compile`, not from timed proofs.
-- **The fee cost has not been measured.** The demo’s **1 DUST per transaction is a placeholder**. Cap (5 DUST per NIGHT) and refill (about one week to cap) follow the published protocol parameters. The pitch line "a one-off ~US$0.50–4.50 per group against VSLA.online’s US$10/month" depends on two numbers that must be measured on Preprod first: the DUST fee per call and the NIGHT price.
-- **Fee-drain risk.** Anyone holding the group key can spend its DUST on junk transactions as fast as it regenerates. That is a denial of service on the group, not a theft. Mitigations:
-  - **Scope:** one key per group, shared only inside the members’ app, never published.
-  - **Relay policy:** the relay sponsors only this group’s circuits.
-  - **Redundancy:** split the endowment across several NIGHT UTXOs. One fee locks one DUST UTXO until confirmation, and relays sharing a key can hit `DustDoubleSpend` (error 196) and must retry.
-  - **Rotation:** supporters re-designate to a new key, and `rotateFeeKey` records it. A new key starts at **zero** DUST and takes about a week to fill, so rotate early.
-- **The guarantee is social, not locked.** The NGO can revoke its DUST registration at any time, and the protocol reserves the right to change DUST rules. The endowment is transparent and redesignatable, but it is not a trust fund.
-- **No contract upgrade path at sunset.** Handing the contract maintenance authority to the group at sunset is future work.
-- **Time, not blocks.** Midnight exposes block *time* to circuits, so the heartbeat window is measured in seconds (the demo uses 90 s; the deploy script defaults to 7 days).
-- **Up to 10 members per contract in this version**, recorded as 2 pages of 5. Real VSLAs have 15–30 members; raising the limit means more pages or a larger page with k=15.
-- The simulator does not generate proofs, so speed in the demo is not speed on-chain. Other projects measured about 18 s per proven, finalised transaction on devnet; that is unverified for this contract.
+`docs/` is the built app with relative paths. Either set **Settings → Pages → Deploy from a branch → `main` / `/docs`**, or choose **GitHub Actions** as the Pages source and let `.github/workflows/pages.yml` publish `docs/` on every push to `main`.
 
-## Remaining steps on a developer machine (Preprod)
+### Preprod
 
-1. Install Docker and start the proof server: `docker compose -f chain/compose.yml up -d` (image `midnightntwrk/proof-server:8.1.0`, the same as example-private-party).
-2. Install the Compact toolchain, run `compact update 0.31.1` and then `npm run compact` to generate the proving keys.
-3. Install Lace (Midnight), switch it to **Preprod**, and set its proof server to **Local `http://localhost:6300`**.
-4. Get tNIGHT from the faucet: https://midnight-tmnight-preprod.nethermind.dev/
-5. Register NIGHT for DUST generation:
-   - The deployer registers to its own DUST address, so it can pay for the deploy.
-   - Create the **group fee key** seed and register (or redirect) some tNIGHT's DUST to the fee key's DUST address. New DUST starts at zero, so do this early.
-6. Deploy: `MIDNIGHT_NETWORK=preprod DEPLOYER_SEED=… npm run deploy:preprod -w chain`.
-7. Run the relay: `GROUP_FEE_KEY_SEED=… GROUP_CONTRACT=… MIDNIGHT_NETWORK=preprod npm run relay -w chain`.
-8. Measure the DUST fee per circuit and the proof times, then replace `ASSUMED_FEE_DUST` in `ui/src/demo/fees.ts`.
+See **[PREPROD.md](PREPROD.md)** and `scripts/preprod.sh`: Docker proof server, Lace and the faucet, DUST registration, deploy, connecting the UI, and measuring the real fee and proof times so the UI can drop its 1 DUST placeholder. Preprod’s indexer and RPC moved to Blockfrost on 9 October 2026 and now need a project token.
+
+## Known limits
+
+- **Not yet run on Preprod.** `chain/` (deploy, measure, Lace providers, fee-key relay) and the live register page are **typechecked but have never been executed against a network**. The build machine had no Docker, no Lace and no tNIGHT. Open questions:
+  - Does Lace honour `balanceUnsealedTransaction(tx, { payFees: false })`? The API type has it; wallet behaviour is unconfirmed.
+  - Does a DUST wallet started from a bare secret key sync fast enough? A first Preprod sync from genesis takes over an hour.
+  - No real proof has been generated. The k values are from `zkir mock-compile`, not timed proofs.
+  - Can a browser call Blockfrost directly with a pasted token (CORS)? Untested with a valid token.
+- **The fee has not been measured.** The demo charges a **1 DUST placeholder** per transaction and says so on screen. Cap (5 DUST per NIGHT) and refill (about a week) follow the published parameters. The pitch line “a one-off ~US$0.50 to 4.50 per group against VSLA.online’s US$10/month” depends on two numbers still to measure: the DUST fee per call and the NIGHT price. `scripts/preprod.sh measure --apply` replaces the placeholder.
+- **The UI writes only in simulator mode.** The six beats drive the simulator. On Preprod the UI can read a group’s public register; recording and proving from the browser through Lace is the next piece of work (`chain/src/browser.ts` and `chain/src/api.ts` hold the providers and calls).
+- **Fee-drain risk.** Anyone holding the group key can spend its DUST on junk transactions as fast as it regenerates. That is a denial of service, not a theft. Mitigations: one key per group kept inside the members’ app, a relay that sponsors only this group’s circuits, an endowment split across several NIGHT UTXOs (relays sharing a key can hit `DustDoubleSpend`, error 196, and must retry), and early rotation (a new key starts at zero DUST).
+- **The guarantee is social, not locked.** The NGO can revoke its DUST registration at any time, and the protocol reserves the right to change DUST rules.
+- **No contract upgrade path at sunset.** Handing maintenance authority to the group at sunset is future work.
+- **Time, not blocks.** The heartbeat window is in seconds of block time (90 s in the demo, 7 days by default on deploy).
+- **Up to 10 members per contract**, recorded as 2 pages of 5. Real VSLAs have 15 to 30 members.
+- **Transient commitments.** Passbooks use Poseidon `transientCommit` (k=14 instead of 17), which Compact does not promise to keep stable across language versions; a future upgrade would re-commit the passbooks.
+- **Design:** the handwriting face (Reenie Beanie) is used only for short notes; none of the faces has a ₵ glyph, so the cedi is drawn as a C with a stroke and read out as ₵ by screen readers.
 
 ## Attribution
 
