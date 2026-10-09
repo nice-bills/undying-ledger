@@ -9,6 +9,7 @@
 //
 //   BLOCKFROST_PROJECT_ID=nightpreprod... DEPLOYER_SEED=<64 hex> npm run deploy:preprod -w chain
 
+import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 import pino from 'pino';
 import { indexerPublicDataProvider } from '@midnight-ntwrk/midnight-js-indexer-public-data-provider';
@@ -19,7 +20,7 @@ import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
 import { toHex } from '@midnight-ntwrk/midnight-js-utils';
 import { createPrivateState, randomBytes } from '@undying-ledger/contract';
 import { getConfig } from '../config.js';
-import { MidnightWalletProvider, syncWallet } from '../wallet.js';
+import { MidnightWalletProvider, syncWallet, type WalletSecret } from '../wallet.js';
 import { UndyingAPI } from '../api.js';
 import type { UndyingCircuitKeys, UndyingProviders } from '../common.js';
 
@@ -28,10 +29,11 @@ const cfg = getConfig();
 setNetworkId(cfg.networkId);
 const zkConfigPath = path.resolve(import.meta.dirname, '../../../contract/src/managed/undying');
 
-const wallet = await MidnightWalletProvider.build(logger as never, { walletNetworkId: cfg.networkId, ...cfg } as never, {
-  kind: 'seed',
-  value: process.env['DEPLOYER_SEED'] ?? '',
-});
+// A TEST-ONLY wallet: DEPLOYER_MNEMONIC (24 words of a throwaway Lace wallet) or DEPLOYER_SEED (64 hex).
+const secret: WalletSecret = process.env['DEPLOYER_MNEMONIC']
+  ? { kind: 'mnemonic', value: process.env['DEPLOYER_MNEMONIC'] }
+  : { kind: 'seed', value: process.env['DEPLOYER_SEED'] ?? '' };
+const wallet = await MidnightWalletProvider.build(logger as never, { walletNetworkId: cfg.networkId, ...cfg } as never, secret);
 await wallet.start();
 await syncWallet(logger as never, wallet.wallet, 600_000);
 
@@ -67,12 +69,15 @@ const api = await UndyingAPI.deploy(providers, zkConfigPath, {
 
 logger.info({ contract: api.address }, 'Deployed');
 // Printed ONCE for the demo. In a real group these go into each phone by QR, never to a server.
-console.log(JSON.stringify({
+const secrets = JSON.stringify({
   contract: api.address,
   groupSecret: toHex(groupSecret),
   secretarySecret: toHex(secretarySecret),
   maintainerSecret: toHex(maintainerSecret),
   memberSecrets: memberSecrets.map(toHex),
   groupFeeKeySeed: toHex(feeKeySeed),
-}, null, 2));
+}, null, 2);
+// DEPLOY_OUT=<file> writes the secrets to a private file (mode 600) instead of the terminal.
+if (process.env['DEPLOY_OUT']) writeFileSync(process.env['DEPLOY_OUT'], secrets + '\n', { mode: 0o600 });
+else console.log(secrets);
 await wallet.stop();

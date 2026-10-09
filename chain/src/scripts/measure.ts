@@ -5,7 +5,7 @@
 // NOT RUN IN THIS REPO (no Docker, no tNIGHT, no Blockfrost token on the build machine).
 // Typechecked only. Run it on your machine after `deploy:preprod` (see PREPROD.md, step 8):
 //
-//   BLOCKFROST_PROJECT_ID=nightpreprod...  DEPLOYER_SEED=<64 hex>  GROUP_CONTRACT=<address> \
+//   BLOCKFROST_PROJECT_ID=nightpreprod...  DEPLOYER_MNEMONIC='<24 words>' (or DEPLOYER_SEED=<64 hex>)  GROUP_CONTRACT=<address> \
 //   SECRETARY_SECRET=<hex>  GROUP_SECRET=<hex>  MEMBER0_SECRET=<hex> \
 //   MIDNIGHT_NETWORK=preprod npm run measure:preprod -w chain
 //
@@ -24,7 +24,7 @@ import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
 import { fromHex } from '@midnight-ntwrk/midnight-js-utils';
 import { applyEntry, createPrivateState, randomBytes, ZERO_PASSBOOK, type Entry, type UndyingPrivateState } from '@undying-ledger/contract';
 import { getConfig, redactToken } from '../config.js';
-import { MidnightWalletProvider, syncWallet } from '../wallet.js';
+import { MidnightWalletProvider, syncWallet, type WalletSecret } from '../wallet.js';
 import { UndyingAPI } from '../api.js';
 import { undyingPrivateStateKey, type UndyingCircuitKeys, type UndyingProviders } from '../common.js';
 
@@ -40,10 +40,10 @@ const cfg = getConfig();
 setNetworkId(cfg.networkId);
 const zkConfigPath = path.resolve(import.meta.dirname, '../../../contract/src/managed/undying');
 
-const wallet = await MidnightWalletProvider.build(logger as never, { walletNetworkId: cfg.networkId, ...cfg } as never, {
-  kind: 'seed',
-  value: env('DEPLOYER_SEED'),
-});
+const secret: WalletSecret = process.env['DEPLOYER_MNEMONIC']
+  ? { kind: 'mnemonic', value: process.env['DEPLOYER_MNEMONIC'] }
+  : { kind: 'seed', value: env('DEPLOYER_SEED') };
+const wallet = await MidnightWalletProvider.build(logger as never, { walletNetworkId: cfg.networkId, ...cfg } as never, secret);
 await wallet.start();
 await syncWallet(logger as never, wallet.wallet, 600_000);
 
