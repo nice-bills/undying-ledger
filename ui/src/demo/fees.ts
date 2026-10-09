@@ -1,16 +1,22 @@
 // SPDX-License-Identifier: Apache-2.0
+import { MEASURED } from './measured';
+
 // A model of the group's shared DUST fee key ("Group Commons") for the no-wallet demo.
 //
 // Protocol parameters are the published Preprod/Mainnet DUST parameters
 // (docs.midnight.network/guides/manage-dust, checked 2026-09-30):
 //   cap = 5 DUST per registered NIGHT; ~604,815 s (about one week) to fill;
 //   new DUST UTXOs start at zero.
-// The FEE PER CONTRACT CALL IS NOT MEASURED. ASSUMED_FEE_DUST is a placeholder
-// until it is measured on Preprod (see README, "Honest limitations").
+// The FEE PER CONTRACT CALL IS NOT MEASURED YET. ASSUMED_FEE_DUST falls back to a 1 DUST
+// placeholder until a Preprod measurement is pasted into measured.ts (see PREPROD.md).
 
 export const DUST_PER_NIGHT_CAP = 5;
 export const SECONDS_TO_CAP = 604_815;
-export const ASSUMED_FEE_DUST = 1; // placeholder, unmeasured
+export const PLACEHOLDER_FEE_DUST = 1; // placeholder, unmeasured
+/** True once a real Preprod fee has been pasted into measured.ts. */
+export const FEE_IS_MEASURED = MEASURED.feeDustPerTx != null;
+/** The fee the demo charges per transaction: the measured Preprod fee if there is one, else the placeholder. */
+export const ASSUMED_FEE_DUST = MEASURED.feeDustPerTx ?? PLACEHOLDER_FEE_DUST;
 
 export type Supporter = { name: string; night: number; note: string };
 
