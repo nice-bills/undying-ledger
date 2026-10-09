@@ -1,0 +1,27 @@
+{
+  "name": "undying-ledger",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "workspaces": [
+    "contract",
+    "ui",
+    "chain"
+  ],
+  "scripts": {
+    "compact": "npm run compact -w contract",
+    "test": "npm test -w contract && npm test -w ui",
+    "typecheck": "npm run typecheck -w contract && npm run typecheck -w ui && npm run typecheck -w chain",
+    "build": "npm run build -w ui && rm -rf docs && cp -r ui/dist docs",
+    "dev": "npm run dev -w ui"
+  },
+  "overrides": {
+    "@midnight-ntwrk/onchain-runtime-v3": "3.0.0",
+    "@midnight-ntwrk/wallet-sdk": "1.2.0",
+    "@midnight-ntwrk/ledger-v8": "8.1.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

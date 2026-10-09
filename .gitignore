@@ -1,0 +1,11 @@
+node_modules/
+ui/dist/
+*.tsbuildinfo
+.vite/
+midnight-level-db/
+logs/
+*.log
+.env
+.env.*
+# proving keys are large (~24 MB); regenerate with `npm run compact`
+contract/src/managed/undying/keys/

@@ -1,0 +1,77 @@
+// SPDX-License-Identifier: Apache-2.0
+// Deploy a demo savings group to Preprod (or local devnet) from a funded seed wallet,
+// then print the group's secrets for the member apps. Provider wiring adapted from
+// midnightntwrk/example-private-party src/providers.ts (Apache-2.0).
+//
+// NOT RUN IN THIS REPO. Needs: docker proof server on :6300, a Preprod seed with tNIGHT
+// registered for DUST (or use the group fee-key relay once one exists).
+//
+//   MIDNIGHT_NETWORK=preprod DEPLOYER_SEED=<64 hex> npm run deploy:preprod -w chain
+
+import path from 'node:path';
+import pino from 'pino';
+import { indexerPublicDataProvider } from '@midnight-ntwrk/midnight-js-indexer-public-data-provider';
+import { httpClientProofProvider } from '@midnight-ntwrk/midnight-js-http-client-proof-provider';
+import { NodeZkConfigProvider } from '@midnight-ntwrk/midnight-js-node-zk-config-provider';
+import { levelPrivateStateProvider } from '@midnight-ntwrk/midnight-js-level-private-state-provider';
+import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
+import { toHex } from '@midnight-ntwrk/midnight-js-utils';
+import { createPrivateState, randomBytes } from '@undying-ledger/contract';
+import { getConfig } from '../config.js';
+import { MidnightWalletProvider, syncWallet } from '../wallet.js';
+import { UndyingAPI } from '../api.js';
+import type { UndyingCircuitKeys, UndyingProviders } from '../common.js';
+
+const logger = pino({ level: 'info' });
+const cfg = getConfig();
+setNetworkId(cfg.networkId);
+const zkConfigPath = path.resolve(import.meta.dirname, '../../../contract/src/managed/undying');
+
+const wallet = await MidnightWalletProvider.build(logger as never, { walletNetworkId: cfg.networkId, ...cfg } as never, {
+  kind: 'seed',
+  value: process.env['DEPLOYER_SEED'] ?? '',
+});
+await wallet.start();
+await syncWallet(logger as never, wallet.wallet, 600_000);
+
+const zk = new NodeZkConfigProvider<UndyingCircuitKeys>(zkConfigPath);
+const providers = {
+  privateStateProvider: levelPrivateStateProvider({
+    privateStateStoreName: 'undying-secretary',
+    privateStoragePasswordProvider: () => process.env['PRIVATE_STATE_PASSWORD'] ?? 'Undying-Ledger-1!',
+    accountId: wallet.getCoinPublicKey(),
+  }),
+  publicDataProvider: indexerPublicDataProvider(cfg.indexer, cfg.indexerWS),
+  zkConfigProvider: zk,
+  proofProvider: httpClientProofProvider(cfg.proofServer, zk),
+  walletProvider: wallet,
+  midnightProvider: wallet,
+} as unknown as UndyingProviders;
+
+const memberSecrets = Array.from({ length: 5 }, () => randomBytes(32));
+const secretarySecret = randomBytes(32);
+const maintainerSecret = randomBytes(32);
+const groupSecret = randomBytes(32);
+const feeKeySeed = randomBytes(32);
+
+const api = await UndyingAPI.deploy(providers, zkConfigPath, {
+  memberSecrets,
+  secretarySecret,
+  maintainerSecret,
+  groupSecret,
+  feeKeyTag: randomBytes(32), // replace with H(fee key's DUST address) once registered
+  graceSeconds: BigInt(process.env['GRACE_SECONDS'] ?? 7 * 24 * 3600),
+  initialPrivateState: createPrivateState(secretarySecret, groupSecret),
+});
+
+logger.info({ contract: api.address }, 'Deployed');
+// Printed ONCE for the demo. In a real group these go into each phone by QR, never to a server.
+console.log(JSON.stringify({
+  contract: api.address,
+  groupSecret: toHex(groupSecret),
+  secretarySecret: toHex(secretarySecret),
+  maintainerSecret: toHex(maintainerSecret),
+  memberSecrets: memberSecrets.map(toHex),
+  groupFeeKeySeed: toHex(feeKeySeed),
+}, null, 2));
+await wallet.stop();

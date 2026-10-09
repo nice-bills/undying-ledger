@@ -1,0 +1,21 @@
+{
+  "name": "@undying-ledger/contract",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "compact": "compact compile src/undying.compact ./src/managed/undying",
+    "compact:skip-zk": "compact compile --skip-zk src/undying.compact ./src/managed/undying",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@midnight-ntwrk/compact-runtime": "0.16.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

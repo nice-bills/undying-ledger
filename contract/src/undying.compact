@@ -1,0 +1,253 @@
+// Undying Ledger — a private savings-group (VSLA / susu) record book that keeps
+// working after the NGO grant and the app vendor are gone.
+//
+// SPDX-License-Identifier: Apache-2.0
+// Structure and test pattern adapted from midnightntwrk/example-bboard and
+// midnightntwrk/example-private-party (Apache-2.0, Copyright (C) Midnight Foundation).
+//
+// Privacy model (see README):
+//   PUBLIC on-chain   : group size, slot numbers, how many meetings were recorded,
+//                       per-slot passbook COMMITMENTS (hiding), passbook versions,
+//                       heartbeat time, sunset phase, fee-key epoch + tag.
+//   PRIVATE           : every amount (shares, social fund, loans), every name,
+//                       every secret key. Amounts are circuit inputs / witnesses
+//                       and only leave the device inside a hiding commitment.
+//   INSIDE THE GROUP  : like a real VSLA meeting where shares are counted aloud,
+//                       the secretary's device knows every member's passbook;
+//                       each member's phone holds its own passbook "stamp".
+
+pragma language_version 0.23;
+
+import CompactStandardLibrary;
+
+// ---------------------------------------------------------------- types
+
+export enum Phase { ACTIVE, SUNSET }
+
+// A member's running passbook. Money is in minor currency units (pesewas).
+export struct Passbook {
+  shares: Uint<32>;          // number of shares bought this cycle
+  socialFund: Uint<32>;      // cumulative social-fund contributions
+  loanOutstanding: Uint<32>; // loan principal + agreed service charge still owed
+}
+
+// One member's line on the meeting sheet.
+export struct Entry {
+  shares: Uint<16>;
+  socialFund: Uint<16>;
+  loanIssued: Uint<32>;
+  loanRepaid: Uint<32>;
+}
+
+// ---------------------------------------------------------------- ledger
+
+export ledger memberCount: Uint<8>;
+export ledger memberKeys: Map<Uint<8>, Bytes<32>>;      // H("undying:member", memberSecret)
+export ledger passbooks: Map<Uint<8>, Field>;           // transientCommit(Passbook, salt)
+export ledger passbookVersion: Map<Uint<8>, Uint<32>>;  // bumps on every update
+export ledger secretaryKey: Bytes<32>;                  // H("undying:secretary", sk)
+export ledger maintainerKey: Bytes<32>;                 // H("undying:maintainer", sk); zeroed at sunset
+export ledger groupKeyTag: Bytes<32>;                   // H("undying:group", groupSecret)
+export ledger meetings: Counter;
+export ledger lastHeartbeat: Uint<64>;                  // unix seconds
+export ledger graceSeconds: Uint<64>;
+export ledger phase: Phase;
+export ledger feeKeyEpoch: Counter;                     // which group DUST fee key is current
+export ledger feeKeyTag: Bytes<32>;                     // H of the current fee key's public part
+export ledger attestations: Map<Bytes<32>, Uint<32>>;   // H(nonce) -> proven minimum shares
+
+// ---------------------------------------------------------------- witnesses
+
+// The role secret held on this device (secretary, maintainer or member).
+witness localSecret(): Bytes<32>;
+// The group secret, shared with members inside their app (QR at the meeting).
+witness groupSecret(): Bytes<32>;
+// The device's plaintext opening of a slot's current passbook.
+witness passbookOf(slot: Uint<8>): Passbook;
+
+// ---------------------------------------------------------------- pure helpers (callable from TS)
+//
+// Passbook commitments use the Poseidon-based transientCommit/transientHash.
+// With persistentCommit (SHA-256) recordMeeting was k=17 (94k rows); with
+// transient primitives it is k=14 (11k rows), so proofs are ~5-10x cheaper.
+// Trade-off: Compact does not promise transient hashes stay identical across
+// language versions, so a future contract upgrade must re-commit passbooks.
+
+export pure circuit roleKey(domain: Bytes<32>, sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([domain, sk]);
+}
+
+export pure circuit passbookSalt(gs: Bytes<32>, slot: Uint<8>, version: Uint<32>): Field {
+  return transientHash<Vector<3, Field>>([degradeToTransient(gs), slot as Field, version as Field]);
+}
+
+export pure circuit passbookCommitment(pb: Passbook, gs: Bytes<32>, slot: Uint<8>, version: Uint<32>): Field {
+  return transientCommit<Passbook>(pb, passbookSalt(gs, slot, version));
+}
+
+export pure circuit attestationId(nonce: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "undying:attest"), nonce]);
+}
+
+// ---------------------------------------------------------------- internal checks
+
+circuit requireSecretary(): [] {
+  assert(secretaryKey == roleKey(pad(32, "undying:secretary"), localSecret()),
+         "Only the group secretary can do this");
+}
+
+circuit requireMaintainer(): [] {
+  assert(phase == Phase.ACTIVE, "Sunset has happened: admin-only paths are closed");
+  assert(maintainerKey == roleKey(pad(32, "undying:maintainer"), localSecret()),
+         "Only the maintainer can do this");
+}
+
+circuit checkedGroupSecret(): Bytes<32> {
+  const gs = groupSecret();
+  assert(groupKeyTag == roleKey(pad(32, "undying:group"), gs), "Wrong group secret");
+  return gs;
+}
+
+// Open the current passbook commitment of `slot` with the device's plaintext.
+circuit openPassbook(gs: Bytes<32>, slot: Uint<8>): Passbook {
+  const pb = passbookOf(slot);
+  const ver = passbookVersion.lookup(slot);
+  assert(passbooks.lookup(slot) == passbookCommitment(pb, gs, slot, ver),
+         "Passbook does not match the ledger");
+  return pb;
+}
+
+// ---------------------------------------------------------------- constructor: create the group
+
+constructor(
+  initialMembers: Vector<10, Bytes<32>>,
+  count: Uint<8>,
+  secretary: Bytes<32>,
+  maintainer: Bytes<32>,
+  groupTag: Bytes<32>,
+  firstFeeKeyTag: Bytes<32>,
+  grace: Uint<64>,
+  startTime: Uint<64>
+) {
+  assert(count <= 10, "At most 10 members in this version");
+  memberCount = disclose(count);
+  secretaryKey = disclose(secretary);
+  maintainerKey = disclose(maintainer);
+  groupKeyTag = disclose(groupTag);
+  feeKeyTag = disclose(firstFeeKeyTag);
+  feeKeyEpoch.increment(1);
+  graceSeconds = disclose(grace);
+  lastHeartbeat = disclose(startTime);
+  phase = Phase.ACTIVE;
+
+  const gs = checkedGroupSecret();
+  const zero = Passbook { shares: 0, socialFund: 0, loanOutstanding: 0 };
+  for (const i of 0..10) {
+    const slot = i as Uint<8>;
+    if (slot < memberCount) {
+      memberKeys.insert(slot, disclose(initialMembers[i]));
+    }
+    passbookVersion.insert(slot, 0);
+    passbooks.insert(slot, disclose(passbookCommitment(zero, gs, slot, 0)));
+  }
+}
+
+// ---------------------------------------------------------------- 1. record a meeting
+
+// The secretary records one page (5 slots) of the meeting sheet. Page 0 opens a
+// new meeting. EVERY slot on the page is re-committed (zero entries included),
+// so the chain cannot tell who saved, borrowed or repaid.
+export circuit recordMeeting(page: Uint<1>, entries: Vector<5, Entry>): [] {
+  requireSecretary();
+  const gs = checkedGroupSecret();
+  const p = disclose(page);
+  if (p == 0) {
+    meetings.increment(1);
+  }
+  for (const j of 0..5) {
+    const slot = ((p as Uint<8>) * 5 + j) as Uint<8>;
+    const old = openPassbook(gs, slot);
+    const e = entries[j];
+    const owed = old.loanOutstanding + e.loanIssued;
+    assert(e.loanRepaid <= owed, "Repayment is larger than the loan");
+    const next = Passbook {
+      shares: (old.shares + e.shares) as Uint<32>,
+      socialFund: (old.socialFund + e.socialFund) as Uint<32>,
+      loanOutstanding: (owed - e.loanRepaid) as Uint<32>
+    };
+    const ver = (passbookVersion.lookup(slot) + 1) as Uint<32>;
+    passbookVersion.insert(slot, ver);
+    passbooks.insert(slot, disclose(passbookCommitment(next, gs, slot, ver)));
+  }
+}
+
+// ---------------------------------------------------------------- 2. member proves own passbook
+
+// A member proves "I hold at least `minShares` shares" (e.g. for a SACCO loan
+// officer who gave them `nonce`) without revealing the amount. Reveals the slot
+// number (a pseudonym), never a name or a balance.
+export circuit attestSavings(slot: Uint<8>, minShares: Uint<32>, nonce: Bytes<32>): [] {
+  const s = disclose(slot);
+  assert(memberKeys.lookup(s) == roleKey(pad(32, "undying:member"), localSecret()),
+         "You are not the member in this slot");
+  const gs = checkedGroupSecret();
+  const pb = openPassbook(gs, s);
+  assert(pb.shares >= minShares, "Not enough shares");
+  attestations.insert(disclose(attestationId(nonce)), disclose(minShares));
+}
+
+// ---------------------------------------------------------------- 3. membership (works before and after sunset)
+
+export circuit addMember(memberKey: Bytes<32>): [] {
+  requireSecretary();
+  assert(memberCount < 10, "Group is full");
+  memberKeys.insert(memberCount, disclose(memberKey));
+  memberCount = (memberCount + 1) as Uint<8>;
+}
+
+// ---------------------------------------------------------------- 4. secretary handover (group-side, survives sunset)
+
+export circuit handoverSecretary(newSecretary: Bytes<32>): [] {
+  requireSecretary();
+  secretaryKey = disclose(newSecretary);
+}
+
+// ---------------------------------------------------------------- 5. maintainer override (admin-only, dies at sunset)
+
+export circuit adminReplaceSecretary(newSecretary: Bytes<32>): [] {
+  requireMaintainer();
+  secretaryKey = disclose(newSecretary);
+}
+
+// ---------------------------------------------------------------- 6. heartbeat (admin-only)
+
+// `now` must not be in the future (checked against block time), so the
+// maintainer cannot pre-pay the grace period.
+export circuit heartbeat(now: Uint<64>): [] {
+  requireMaintainer();
+  const t = disclose(now);
+  assert(blockTimeGte(t), "Heartbeat time is in the future");
+  assert(t >= lastHeartbeat, "Heartbeat time went backwards");
+  lastHeartbeat = t;
+}
+
+// ---------------------------------------------------------------- 7. sunset (anyone)
+
+export circuit sunset(): [] {
+  assert(phase == Phase.ACTIVE, "Already sunset");
+  assert(blockTimeGte((lastHeartbeat + graceSeconds) as Uint<64>),
+         "The maintainer is still sending heartbeats");
+  phase = Phase.SUNSET;
+  maintainerKey = default<Bytes<32>>;
+}
+
+// ---------------------------------------------------------------- 8. rotate the group fee key note
+
+// If the group's shared DUST fee key leaks or is griefed, supporters re-designate
+// their NIGHT to a fresh DUST address and the secretary records the new key's tag
+// so every member app switches. Group-side, so it keeps working after sunset.
+export circuit rotateFeeKey(newFeeKeyTag: Bytes<32>): [] {
+  requireSecretary();
+  feeKeyEpoch.increment(1);
+  feeKeyTag = disclose(newFeeKeyTag);
+}

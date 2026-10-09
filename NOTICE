@@ -1,0 +1,15 @@
+Undying Ledger
+Copyright 2026 the Undying Ledger authors. Licensed under the Apache License, Version 2.0.
+
+This product includes software adapted from:
+
+  midnightntwrk/example-bboard — https://github.com/midnightntwrk/example-bboard
+  Copyright (C) Midnight Foundation. Licensed under the Apache License, Version 2.0.
+  Adapted: contract simulator test pattern (contract/src/simulator.ts), witness layout
+  (contract/src/witnesses.ts), Lace dApp-connector providers (chain/src/browser.ts),
+  Vite WASM configuration (ui/vite.config.ts), compiled-contract wiring (chain/src/common.ts, chain/src/api.ts).
+
+  midnightntwrk/example-private-party — https://github.com/midnightntwrk/example-private-party
+  Copyright (C) Midnight Foundation. Licensed under the Apache License, Version 2.0.
+  Adapted: DUST fee sponsorship flow and HTTP service (chain/src/relay/fee-key-relay.ts),
+  copied: chain/src/wallet.ts, chain/src/config.ts, chain/compose.yml.
