@@ -1,0 +1,1 @@
+let e;const r=t=>{e=t},o=()=>{if(e===void 0)throw new Error("Network ID has not been configured. Call setNetworkId() before any wallet or contract operation.");return e};export{o as getNetworkId,r as setNetworkId};
