@@ -14,7 +14,8 @@
     "test": "npm test -w contract && npm test -w ui",
     "typecheck": "npm run typecheck -w contract && npm run typecheck -w ui && npm run typecheck -w chain",
     "build": "npm run build -w ui && rm -rf docs && cp -r ui/dist docs",
-    "dev": "npm run dev -w ui"
+    "dev": "npm run dev -w ui",
+    "test:e2e": "npm --prefix e2e run test:e2e"
   },
   "overrides": {
     "@midnight-ntwrk/onchain-runtime-v3": "3.0.0",
