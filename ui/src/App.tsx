@@ -2,7 +2,7 @@
 // Undying Ledger, "A2 Passbook". Six beats of the demo story, all driven by the real compiled
 // Compact circuits through DemoEngine (compact-runtime in this browser). Only the presentation
 // is new; engine.ts, fees.ts and the contract are the same logic the tests exercise.
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { DemoEngine } from './demo/engine';
 import { InkDefs } from './a2/paper';
 import { pageTurn, RM } from './a2/motion';
@@ -15,6 +15,9 @@ import { ProveBeat } from './beats/ProveBeat';
 import { FeeKeyPage } from './pages/FeeKeyPage';
 import { LegalPage } from './pages/LegalPage';
 import type { BeatProps } from './beats/types';
+
+// Preprod live mode ships Midnight.js; load it only when someone opens #/live.
+const LivePage = lazy(() => import('./lace/LivePage'));
 
 export const LABELS = [
   'Secretary records meeting 12',
@@ -56,7 +59,7 @@ function useHashRoute(): string {
     addEventListener('hashchange', f);
     return () => removeEventListener('hashchange', f);
   }, []);
-  return h.replace(/^#\/?/, '');
+  return h.replace(/^#\/?/, '').split('?')[0];
 }
 
 export default function App() {
@@ -121,7 +124,16 @@ export default function App() {
     document.title = route === 'terms' ? 'Terms · Undying Ledger' : route === 'privacy' ? 'Privacy · Undying Ledger' : 'Undying Ledger · Midnight';
   }, [route]);
 
-  const page = route === 'terms' || route === 'privacy' ? <LegalPage which={route} /> : route === 'fee-key' ? <FeeKeyPage e={e} /> : null;
+  const page =
+    route === 'terms' || route === 'privacy' ? (
+      <LegalPage which={route} />
+    ) : route === 'fee-key' ? (
+      <FeeKeyPage e={e} />
+    ) : route === 'live' ? (
+      <Suspense fallback={<p className="boot">Opening the live register…</p>}>
+        <LivePage />
+      </Suspense>
+    ) : null;
 
   return (
     <div id="app">

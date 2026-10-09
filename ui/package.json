@@ -13,6 +13,9 @@
   },
   "dependencies": {
     "@midnight-ntwrk/compact-runtime": "0.16.0",
+    "@midnight-ntwrk/dapp-connector-api": "4.0.1",
+    "@midnight-ntwrk/midnight-js-indexer-public-data-provider": "4.1.1",
+    "@midnight-ntwrk/midnight-js-network-id": "4.1.1",
     "@undying-ledger/contract": "0.1.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"

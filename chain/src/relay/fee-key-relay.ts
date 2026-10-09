@@ -15,7 +15,7 @@
 // for the DUST spend proof, and a fee key that has registered NIGHT generating DUST.
 //
 //   GROUP_FEE_KEY_SEED=<64 hex>  GROUP_CONTRACT=<contract address hex>
-//   MIDNIGHT_NETWORK=preprod MIDNIGHT_PROOF_SERVER=http://127.0.0.1:6300 npm run relay -w chain
+//   BLOCKFROST_PROJECT_ID=nightpreprod... MIDNIGHT_NETWORK=preprod MIDNIGHT_PROOF_SERVER=http://127.0.0.1:6300 npm run relay -w chain
 //
 //   GET  /health   -> { status, dust, epoch }
 //   POST /sponsor  -> { tx: "<hex FinalizedTransaction, bound, no fee>" } => { success, txId }

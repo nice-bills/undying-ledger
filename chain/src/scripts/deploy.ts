@@ -3,10 +3,11 @@
 // then print the group's secrets for the member apps. Provider wiring adapted from
 // midnightntwrk/example-private-party src/providers.ts (Apache-2.0).
 //
-// NOT RUN IN THIS REPO. Needs: docker proof server on :6300, a Preprod seed with tNIGHT
+// NOT RUN IN THIS REPO. Needs: BLOCKFROST_PROJECT_ID (Preprod indexer/RPC moved to Blockfrost
+// on 2026-10-09), docker proof server on :6300, a Preprod seed with tNIGHT
 // registered for DUST (or use the group fee-key relay once one exists).
 //
-//   MIDNIGHT_NETWORK=preprod DEPLOYER_SEED=<64 hex> npm run deploy:preprod -w chain
+//   BLOCKFROST_PROJECT_ID=nightpreprod... DEPLOYER_SEED=<64 hex> npm run deploy:preprod -w chain
 
 import path from 'node:path';
 import pino from 'pino';
