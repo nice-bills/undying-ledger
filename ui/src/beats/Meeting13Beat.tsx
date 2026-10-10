@@ -147,7 +147,7 @@ export function Meeting13Beat({ e, go, announce }: BeatProps) {
           <div className="ln">{ASSUMED_FEE_DUST} DUST</div>
           <div className="ln">fee key {f.epoch}</div>
           <div className="ln" data-testid="chit-left">
-            {Math.floor(f.balance)} left
+            <span className="n">{Math.floor(f.balance)}</span> left
           </div>
           <Stamp ref={paid} kind="paid" ink="paid" style={{ left: 22, top: 118 }} />
         </Loose>

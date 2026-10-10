@@ -59,6 +59,12 @@ export function countTo(el: HTMLElement | null, from: number, to: number, ms = 6
     el.textContent = fmt(to);
     return Promise.resolve();
   }
+  // Hold the box at the final value's width while counting, so text beside it (GH₵) stays put even in a
+  // face without tabular digits. Needs an inline-block element; released when the count lands.
+  const held = el.style.minWidth;
+  el.textContent = fmt(to);
+  el.style.minWidth = `${el.getBoundingClientRect().width}px`;
+  el.textContent = fmt(from);
   return new Promise((res) => {
     const t0 = performance.now();
     const tick = (t: number) => {
@@ -66,7 +72,10 @@ export function countTo(el: HTMLElement | null, from: number, to: number, ms = 6
       const e = 1 - Math.pow(1 - p, 3);
       el.textContent = fmt(Math.round(from + (to - from) * e));
       if (p < 1) requestAnimationFrame(tick);
-      else res();
+      else {
+        el.style.minWidth = held;
+        res();
+      }
     };
     requestAnimationFrame(tick);
   });

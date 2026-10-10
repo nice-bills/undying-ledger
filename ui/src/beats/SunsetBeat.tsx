@@ -177,7 +177,7 @@ export function SunsetBeat({ e, go, announce }: BeatProps) {
                   <span style={{ fontSize: 56 }}>{erased ? 'Erased' : 'Set'}</span>
                 ) : (
                   <>
-                    <span>{ended ? secs : DEMO_GRACE_SECONDS}</span>
+                    <span className="secs">{ended ? secs : DEMO_GRACE_SECONDS}</span>
                     <small>s</small>
                   </>
                 )}
