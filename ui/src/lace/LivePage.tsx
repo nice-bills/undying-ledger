@@ -15,6 +15,7 @@ import { Leaf } from '../a2/paper';
 import type { LiveSession } from './live-session';
 
 const LiveWrite = lazy(() => import('./LiveWrite'));
+const LOOKING = 'Looking for the Lace wallet…';
 
 // Preprod's public indexer moved to Blockfrost on 9 October 2026 and needs a project token
 // (docs.midnight.network/guides/networks-and-environments). The page prefers the indexer the
@@ -58,7 +59,7 @@ export default function LivePage() {
   const [reg, setReg] = useState<Register | null>(null);
   const [status, setStatus] = useState<'idle' | 'reading' | 'error'>('idle');
   const [msg, setMsg] = useState('');
-  const [lace, setLace] = useState<string>('Looking for the Lace wallet…');
+  const [lace, setLace] = useState<string>(LOOKING);
   const [laceErr, setLaceErr] = useState(false);
   const [checking, setChecking] = useState(false);
   const [session, setSession] = useState<LiveSession | null>(null);
@@ -68,7 +69,9 @@ export default function LivePage() {
     h.current?.focus({ preventScroll: true });
     const t = setTimeout(() => {
       const api = findLace();
-      setLace(api ? `Lace found (dApp connector ${api.apiVersion}).` : 'No Lace wallet in this browser. Reading the public register needs none.');
+      const found = api ? `Lace found (dApp connector ${api.apiVersion}).` : 'No Lace wallet in this browser. Reading the public register needs none.';
+      // never overwrite what a "Check my Lace setup" tap already reported
+      setLace((prev) => (prev === LOOKING ? found : prev));
     }, 800);
     return () => clearTimeout(t);
   }, []);
