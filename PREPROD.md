@@ -50,7 +50,7 @@ Source: https://docs.midnight.network/relnotes/support-matrix
   compact update 0.31.1
   ```
 
-- `npm ci && npm test` in the repo root should report 20 + 2 passing tests before you start.
+- `npm ci && npm test` in the repo root should report 20 + 30 passing tests before you start.
 
 ### 2. A Blockfrost token for Preprod
 
@@ -132,19 +132,58 @@ and the fee key page, and the proving notes say how long the real proof took. Yo
 The number to update in the pitch is then: one-off group endowment = (fee per meeting x meetings
 per year) / (DUST per NIGHT per year), priced at the NIGHT price of the day.
 
-### 9. Connect the UI
+### 9. Connect the UI and act on the book
 
 ```bash
 npm run dev
-# open http://localhost:5173/#/live?contract=<address from .preprod/group.json>
+# open http://localhost:5173/#/live?contract=<address from .preprod/group.json>&relay=http://localhost:3001
 ```
 
-The **live register** page (`ui/src/lace/LivePage.tsx`) reads the group's public state (members,
+`npm run dev` also serves the proving keys and ZKIR from `contract/src/managed/undying` at `/zk/`,
+where the page's proving-keys field points by default. They are never copied into `docs/`.
+
+The **live page** (`ui/src/lace/LivePage.tsx`) first reads the group's public state (members,
 meetings, phase, last vendor check-in, one sealed commitment per slot) through the indexer your
 Lace wallet is configured with, or through a Blockfrost Preprod project ID you paste on the page
-(kept in that tab only). It is read-only. Writing to the book from the browser uses
-`chain/src/browser.ts` (Lace providers, `payFees: false` for the group fee key) and
-`chain/src/api.ts`; wiring those into the six-beat screens is the next piece of work.
+(kept in that tab only). No wallet is needed for that.
+
+**Check my Lace setup** connects with dApp connector 4.0.1 (`connect('preprod')`) and checks Lace's
+network and proof server. It warns when the prover is not `localhost`/`127.0.0.1`, because the
+passbook would then leave the machine to be proved. After that the page loads the write path
+(`ui/src/lace/LiveWrite.tsx` and `live-session.ts`) and builds the Midnight.js providers from
+`chain/src/browser.ts`: Lace's wallet and submit APIs, its prover, its indexer (or the pasted
+Blockfrost ID), and private state in this browser (`levelPrivateStateProvider`, IndexedDB,
+encrypted with a passphrase you type, scoped to your wallet).
+
+1. Choose **a member** or **the secretary**, paste your secret and the group secret from
+   `.preprod/group.json` (and your slot, for a member), choose a passphrase (16+ characters, three
+   kinds of character), and press **Join this group**. The page checks the address with the indexer
+   first and your secrets against the public keys on the book.
+2. Fees: with a **relay URL** (step 10) each call is balanced by Lace with `payFees: false` and the
+   bound transaction is POSTed to the relay, which adds the DUST fee from the group key. With no
+   relay URL, tick **let Lace pay** to pay from your own DUST. Without either, nothing is proved.
+3. Secretary: enter the meeting's shares, social fund, loans and repayments per slot and press
+   **Stamp and record meeting N**. One `recordMeeting` call per page of five slots. The page then
+   lists one stamp per member, like `undying-stamp:0:3:1:0`.
+4. Member: **Open my passbook** reads your copy from private state and checks it against the sealed
+   commitment with the contract's `passbookCommitment`. If it is behind, paste the secretary's
+   stamp and **Keep this stamp**; it is kept only if it opens the sealed line.
+5. Member: **Make a proof slip** calls `attestSavings(slot, N, nonce)`. Asking for more than you
+   hold is refused by the circuit.
+6. Anyone: **Call sunset** after the grace period (`GRACE_SECONDS=300` at deploy makes that the same
+   day). Before then the book refuses it.
+
+Each call shows the proving skeleton and its stage: proving on your prover, Lace balancing, the
+relay adding the fee, or Lace submitting. Errors are the page's own words for: no Lace, Lace
+declined, wrong network, no prover or a remote one, no indexer, contract not found, Lace refusing
+`payFees: false`, relay unreachable or refusing, and the circuit's own refusals.
+
+> **Status of this step.** Wired and typechecked; covered by 28 unit tests with a mocked
+> `window.midnight` and mocked providers, and by an e2e smoke test of `#/live` without Lace.
+> **Not yet run against Preprod.** Open question: whether Lace honours
+> `balanceUnsealedTransaction(tx, { payFees: false })`. If it refuses, the page says so and offers
+> **Let Lace pay this fee instead**. If it accepts but still adds its own fee, the page cannot
+> tell and the relay would add a second one.
 
 ### 10. Optional: the group fee-key relay
 
@@ -156,7 +195,10 @@ MIDNIGHT_NETWORK=preprod npm run relay -w chain
 The relay starts a DUST wallet from the group key and adds the fee to members' calls for this
 contract only. For it to pay anything, some tNIGHT must be registered (or redirected) to the
 fee key's DUST address, and new DUST starts at zero. The relay does not print that address yet;
-that is open work. Also open: whether Lace honours `balanceUnsealedTransaction(tx, { payFees: false })`.
+that is open work. Also open: whether Lace honours `balanceUnsealedTransaction(tx, { payFees: false })`,
+and whether the relay's `balanceFinalizedTransaction` accepts what Lace returns. Put the relay's
+URL in the live page's relay field (or `&relay=` in the page URL). The relay answers CORS
+preflights from any origin.
 
 ### 11. Stop
 

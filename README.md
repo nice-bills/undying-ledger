@@ -47,7 +47,7 @@ The UI is a printed VSLA passbook ("A2 Passbook"): cloth covers that change colo
 | 5 | **Meeting 13 still records** | `recordMeeting` with no vendor and no admin key; the fee comes off the group fee key gauge. |
 | 6 | **Prove savings, keep the amount** (blue security paper) | `attestSavings` proves “at least 30 shares” for a loan officer. Asking for 33 when she holds 32 is refused by the circuit, and the slip is withdrawn. |
 
-Also in the app: a **fee key page** (a relative points their NIGHT’s DUST at the key, a leaked key burns DUST but cannot write the book, time refills it, rotation starts a fresh key), **Terms** and **Privacy** pages, and a read-only **live register** for a group deployed on Preprod (`#/live`).
+Also in the app: a **fee key page** (a relative points their NIGHT’s DUST at the key, a leaked key burns DUST but cannot write the book, time refills it, rotation starts a fresh key), **Terms** and **Privacy** pages, and a **live page** for a group deployed on Preprod (`#/live`): anyone can read its public register, and with Lace a member can join it by address and act on it (record a meeting, open their own passbook, prove at least N shares, call sunset). The live write path is wired and unit-tested with a mocked Lace, but has not been run against Preprod yet (see Known limits).
 
 The simulator makes no zero-knowledge proofs, so the proving skeletons stay up for a short fixed time and say so. Once real proof times are measured on Preprod they appear in those notes (see [PREPROD.md](PREPROD.md)).
 
@@ -57,10 +57,11 @@ The simulator makes no zero-knowledge proofs, so the proving skeletons stay up f
 contract/   undying.compact (8 circuits, Compact 0.31.1) + witnesses + a no-wallet simulator + 20 unit tests
 ui/         React 19 + Vite. src/demo: DemoEngine (simulator), fee-key model, measured.ts
             src/beats: the six beats; src/a2: paper, stamps, pen and motion; src/pages: fee key, Terms, Privacy
-            src/lace: the Preprod live register (lazy-loaded, ships Midnight.js only when opened)
-chain/      Preprod wiring: Midnight.js 4.1.1 deploy/join/call, Lace providers (payFees:false),
+            src/lace: the Preprod live page: public register, then Lace write-through (LiveSession,
+            LiveWrite). Lazy-loaded: the demo never ships Midnight.js; the write path loads after Lace connects
+chain/      Preprod wiring: Midnight.js 4.1.1 deploy/join/call, Lace connect/check/providers (payFees:false),
             the group fee-key relay, deploy and measure scripts. Preprod via Blockfrost.
-e2e/        TesterArmy e2e suite: the six-beat story and the refusals at 390x844 and 430x932
+e2e/        TesterArmy e2e suite: the six-beat story, the refusals and #/live without Lace, at 390x844 and 430x932
 docs/       the static build of ui/ for GitHub Pages (relative paths)
 media/      demo.mp4, six screenshots, record-demo.mjs
 scripts/    preprod.sh: one command from clone to a measured Preprod deployment
@@ -128,7 +129,7 @@ Requires Node 22+.
 
 ```bash
 npm ci
-npm test                      # 20 contract tests + 2 demo-story tests (vitest)
+npm test                      # 20 contract tests + 2 demo-story tests + 28 live-wiring tests (vitest)
 npm run typecheck             # contract, ui, chain
 npm run dev                   # the demo at http://localhost:5173
 npm run build                 # static build -> ui/dist, copied to docs/
@@ -149,6 +150,8 @@ npm run compact               # -> contract/src/managed/undying (contract/, zkir
 |---|---|---|
 | `contract/src/test/undying.test.ts` | 20 | every circuit, every refusal, raw public state searched for amounts and secrets, two groups with different balances have identically shaped public state |
 | `ui/src/demo/__tests__/engine.test.ts` | 2 | the demo story end to end on the engine; a leaked key drains fees but not the book, rotation recovers |
+| `ui/src/lace/__tests__/live-session.test.ts` | 28 | the Lace write path with a mocked `window.midnight` (dApp connector 4.0.1) and mocked Midnight.js providers: connect, network and prover checks, join by address, record meeting through the fee-key relay (`payFees: false`) or with Lace paying, own passbook and stamps checked with the real `passbookCommitment`, proof, sunset, and every error message |
+| `e2e/tests/live.e2e.ts` | 1 per phone size | `#/live` loads from the static build and says there is no Lace wallet; no write controls without one |
 | `e2e/tests/demo-flow.e2e.ts` | 4 per phone size | the six-beat story in a real browser, the refusals, Terms/Privacy/fee key, no console errors; plus an agentic smoke test that runs only with a model key |
 
 ### Deploying the demo
@@ -161,13 +164,15 @@ See **[PREPROD.md](PREPROD.md)** and `scripts/preprod.sh`: Docker proof server, 
 
 ## Known limits
 
-- **Not yet run on Preprod.** `chain/` (deploy, measure, Lace providers, fee-key relay) and the live register page are **typechecked but have never been executed against a network**. The build machine had no Docker, no Lace and no tNIGHT. Open questions:
-  - Does Lace honour `balanceUnsealedTransaction(tx, { payFees: false })`? The API type has it; wallet behaviour is unconfirmed.
+- **Not yet run on Preprod.** `chain/` (deploy, measure, Lace providers, fee-key relay) and the live page, including its write path, are **typechecked but have never been executed against a network**. The build machine had no Docker, no Lace and no tNIGHT. The browser write path is covered by unit tests with a mocked Lace and mocked providers, which prove the wiring and the error paths, not that Lace, the proof server, the indexer or the relay behave like the mocks. Open questions:
+  - Does Lace honour `balanceUnsealedTransaction(tx, { payFees: false })`? The API type has it; wallet behaviour is unconfirmed. If Lace refuses, the page says “Lace would not balance this call without paying the fee itself (payFees: false)” and offers to let Lace pay from the member’s own DUST. If Lace accepts but still adds its own fee, nothing on the page can tell; the relay would then add a second fee. Checking the balanced transaction’s fee before relaying is open work.
+  - Will the relay accept what Lace returns? `balanceUnsealedTransaction` gives back a finalized transaction and the relay re-balances it with `balanceFinalizedTransaction` for DUST only. That pairing has not been exercised.
+  - Does `levelPrivateStateProvider` (IndexedDB through `browser-level`) work in the Vite build in a real browser? It is bundled and typechecked; it was never opened in a browser here.
   - Does a DUST wallet started from a bare secret key sync fast enough? A first Preprod sync from genesis takes over an hour.
   - No real proof has been generated. The k values are from `zkir mock-compile`, not timed proofs.
   - Can a browser call Blockfrost directly with a pasted token (CORS)? Untested with a valid token.
 - **The fee has not been measured.** The demo charges a **1 DUST placeholder** per transaction and says so on screen. Cap (5 DUST per NIGHT) and refill (about a week) follow the published parameters. The pitch line “a one-off ~US$0.50 to 4.50 per group against VSLA.online’s US$10/month” depends on two numbers still to measure: the DUST fee per call and the NIGHT price. `scripts/preprod.sh measure --apply` replaces the placeholder.
-- **The UI writes only in simulator mode.** The six beats drive the simulator. On Preprod the UI can read a group’s public register; recording and proving from the browser through Lace is the next piece of work (`chain/src/browser.ts` and `chain/src/api.ts` hold the providers and calls).
+- **The six beats drive the simulator; Preprod writes live on `#/live`.** The live page joins a deployed group by address with the member’s secrets (from `.preprod/group.json`; in a real group they arrive by QR) and calls the real circuits through `chain/src/api.ts`: `recordMeeting` (secretary), `attestSavings` (member), `sunset` (anyone). A member’s passbook stays in browser private state, encrypted with a passphrase; after each meeting the secretary hands out one-line stamps, which the member’s phone checks against the sealed commitment before keeping. The beats themselves are not wired to Preprod, and the private state written by the Node deploy script does not carry over to the browser, so a secretary who wants to record on an older group must import the stamps first.
 - **Fee-drain risk.** Anyone holding the group key can spend its DUST on junk transactions as fast as it regenerates. That is a denial of service, not a theft. Mitigations: one key per group kept inside the members’ app, a relay that sponsors only this group’s circuits, an endowment split across several NIGHT UTXOs (relays sharing a key can hit `DustDoubleSpend`, error 196, and must retry), and early rotation (a new key starts at zero DUST).
 - **The guarantee is social, not locked.** The NGO can revoke its DUST registration at any time, and the protocol reserves the right to change DUST rules.
 - **No contract upgrade path at sunset.** Handing maintenance authority to the group at sunset is future work.

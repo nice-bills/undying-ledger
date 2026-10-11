@@ -14,6 +14,7 @@ npx e2e run                # starts serve.mjs on a free port, runs every test on
 |---|---|
 | the six-beat story | record meeting 12 (circuit runs), Ama's passbook 26 → 29 shares and GH₵150 loan cleared, husband's phone sees 12 meetings and 5 keys and cannot open slot 0, early `sunset()` refused ("still sending heartbeats"), skip, sunset accepted ("Erased"), meeting 13 records after sunset, 33 shares refused by `attestSavings`, 30 shares proved; no console errors |
 | refusals on a fresh book | early sunset refused straight from the rail, 33 shares refused when Ama holds 26 |
+| #/live without Lace | the live page and its chunks load from the static build, it says there is no Lace wallet, the check gives the install hint, no write controls appear, a malformed address is refused |
 | Terms, Privacy, fee key | the legal pages and the fee-key page render; a leaked key burns DUST but cannot write the book |
 | agent: a newcomer… | agentic smoke test with `agent.act`/`agent.assert`; **skipped** unless `AI_GATEWAY_API_KEY` is set |
 
