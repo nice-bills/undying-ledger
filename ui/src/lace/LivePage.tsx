@@ -1,15 +1,20 @@
 // SPDX-License-Identifier: Apache-2.0
-// Live mode (Preprod): read a deployed group's PUBLIC register from the Midnight indexer, and
-// check the member's Lace wallet setup. Loaded on demand (#/live), so the simulator demo does not
-// ship Midnight.js. Writing to the book (recordMeeting, attestSavings with private state and
-// local proving) goes through chain/src/api.ts + chain/src/browser.ts; see PREPROD.md.
+// Live mode (Preprod): read a deployed group's PUBLIC register from the Midnight indexer, check
+// the member's Lace wallet setup, and once Lace connects, act on the book (LiveWrite: join by
+// address, record a meeting, open my passbook, prove at least N shares, sunset) through
+// chain/src/browser.ts + chain/src/api.ts. Loaded on demand (#/live), so the simulator demo does
+// not ship Midnight.js; the write path is a further chunk loaded only after Lace connects.
 //
 // NOT VERIFIED against a live deployment: the build machine had no Docker, no Lace and no tNIGHT.
-// It is typechecked and its offline states were exercised in a headless browser.
-import { useEffect, useRef, useState } from 'react';
+// It is typechecked, the write wiring is unit-tested with a mocked Lace and mocked providers,
+// and the no-Lace state is covered by the e2e suite.
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { ledger, Phase } from '@undying-ledger/contract';
 import type { InitialAPI } from '@midnight-ntwrk/dapp-connector-api';
 import { Leaf } from '../a2/paper';
+import type { LiveSession } from './live-session';
+
+const LiveWrite = lazy(() => import('./LiveWrite'));
 
 // Preprod's public indexer moved to Blockfrost on 9 October 2026 and needs a project token
 // (docs.midnight.network/guides/networks-and-environments). The page prefers the indexer the
@@ -54,6 +59,9 @@ export default function LivePage() {
   const [status, setStatus] = useState<'idle' | 'reading' | 'error'>('idle');
   const [msg, setMsg] = useState('');
   const [lace, setLace] = useState<string>('Looking for the Lace wallet…');
+  const [laceErr, setLaceErr] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [session, setSession] = useState<LiveSession | null>(null);
   const h = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
@@ -66,17 +74,26 @@ export default function LivePage() {
   }, []);
 
   const connect = async () => {
-    const api = findLace();
-    if (!api) return setLace('No Lace wallet in this browser. Install Lace (Midnight) and switch it to Preprod.');
+    if (checking) return;
+    if (!findLace()) {
+      setLaceErr(true);
+      return setLace('No Lace wallet in this browser. Install Lace (Midnight), switch it to Preprod, then reload this page.');
+    }
+    setChecking(true);
+    setLaceErr(false);
+    setLace('Asking Lace to connect to Preprod…');
     try {
-      const c = await api.connect(PREPROD.networkId);
-      const cfg = await c.getConfiguration();
-      const local = /^(https?:\/\/)?(localhost|127\.0\.0\.1)/.test(cfg.proverServerUri ?? '');
-      setLace(
-        `Connected to Lace on ${PREPROD.networkId}. Proof server: ${cfg.proverServerUri ?? 'not set'}${local ? ' (local, good)' : '. Set it to Local http://localhost:6300 so proofs stay on this machine.'}`,
-      );
+      const { LiveSession } = await import('./live-session');
+      const s = await LiveSession.connect();
+      const p = s.setup.proverUri;
+      setLace(`Connected to Lace on ${PREPROD.networkId}. Proof server: ${p}${s.setup.proverLocal ? ' (local, good).' : '. Set it to Local http://localhost:6300 so proofs stay on this machine.'}`);
+      setLaceErr(!s.setup.proverLocal);
+      setSession(s);
     } catch (e) {
-      setLace(`Lace refused the connection: ${(e as Error).message}`);
+      setLaceErr(true);
+      setLace(redact((e as Error).message));
+    } finally {
+      setChecking(false);
     }
   };
 
@@ -136,7 +153,7 @@ export default function LivePage() {
         <h2 className="disp" tabIndex={-1} ref={h} style={{ fontSize: 40 }}>
           The public register
         </h2>
-        <p className="lede">What anyone can read about a deployed group. No wallet needed.</p>
+        <p className="lede">What anyone can read about a deployed group, no wallet needed. With Lace, members act on it.</p>
         <div className="prose">
           <label className="label" htmlFor="addr">
             Contract address
@@ -228,13 +245,33 @@ export default function LivePage() {
         <h3 className="label" style={{ marginTop: 22 }}>
           Member wallet
         </h3>
-        <p className="note" data-testid="lace-status" style={{ marginTop: 6 }}>
+        <p className={laceErr ? 'err' : 'note'} data-testid="lace-status" role="status" style={{ marginTop: 6 }}>
           {lace}
         </p>
         <div style={{ height: 10 }} />
-        <button className="btn ghost" type="button" onClick={connect}>
-          Check my Lace setup
-        </button>
+        {!session && (
+          <button className="btn ghost" type="button" onClick={connect} disabled={checking}>
+            {checking ? 'Checking Lace' : 'Check my Lace setup'}
+          </button>
+        )}
+        {checking && (
+          <div className="proving on" role="status" data-testid="lace-checking">
+            <span className="skel" style={{ width: '72%' }} />
+            <span className="skel" style={{ width: '48%' }} />
+          </div>
+        )}
+        {session && (
+          <Suspense
+            fallback={
+              <div className="proving on" role="status">
+                <span className="skel" style={{ width: '86%' }} />
+                <span className="skel" style={{ width: '60%' }} />
+              </div>
+            }
+          >
+            <LiveWrite session={session} address={address} blockfrost={token} />
+          </Suspense>
+        )}
       </Leaf>
     </section>
   );
