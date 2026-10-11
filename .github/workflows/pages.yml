@@ -1,31 +1,28 @@
-# Publishes docs/ (the built demo, relative paths) to GitHub Pages on every push to main.
-# One-time setup: Settings -> Pages -> Source: GitHub Actions.
-# (Or skip this workflow and choose "Deploy from a branch: main /docs" instead.)
+# Keeps the gh-pages branch equal to docs/ (the built demo, relative paths) on every push to main.
+# GitHub Pages serves the gh-pages branch: https://nice-bills.github.io/undying-ledger/
 name: pages
 on:
   push:
     branches: [main]
+    paths: [docs/**]
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  publish:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with: { path: docs }
-      - id: deployment
-        uses: actions/deploy-pages@v4
+        with: { fetch-depth: 0 }
+      - name: Push docs/ to gh-pages
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          SHA=$(git subtree split --prefix docs HEAD)
+          git push --force origin "$SHA:refs/heads/gh-pages"

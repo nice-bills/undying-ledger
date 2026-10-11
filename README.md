@@ -8,7 +8,7 @@ Built for the AKINDO Midnight Buildathon, Wave 2.
 
 ![The six beats of the demo: meeting 12, Ama's passbook, the husband's phone, sunset, meeting 13, the proof slip](media/strip.jpg)
 
-**Try it:** serve `docs/` with any static server (`npx serve docs`), or enable GitHub Pages (see [Deploying the demo](#deploying-the-demo)). The demo runs the **real compiled Compact circuits** in your browser through `@midnight-ntwrk/compact-runtime`. It needs no wallet, no network and no tokens. A one-minute recording of the built app is in [`media/demo.mp4`](media/demo.mp4); [`media/demo-narrated.mp4`](media/demo-narrated.mp4) is the same cut with a synthetic voice-over and English captions ([`media/demo.srt`](media/demo.srt)).
+**Try it live:** https://nice-bills.github.io/undying-ledger/ (or serve `docs/` with any static server: `npx serve docs`). The demo runs the **real compiled Compact circuits** in your browser through `@midnight-ntwrk/compact-runtime`. It needs no wallet, no network and no tokens. A one-minute recording of the built app is in [`media/demo.mp4`](media/demo.mp4); [`media/demo-narrated.mp4`](media/demo-narrated.mp4) is the same cut with a synthetic voice-over and English captions ([`media/demo.srt`](media/demo.srt)).
 
 ---
 
@@ -158,7 +158,7 @@ npm run compact               # -> contract/src/managed/undying (contract/, zkir
 
 ### Deploying the demo
 
-`docs/` is the built app with relative paths. Either set **Settings → Pages → Deploy from a branch → `main` / `/docs`**, or choose **GitHub Actions** as the Pages source and let `.github/workflows/pages.yml` publish `docs/` on every push to `main`.
+`docs/` is the built app with relative paths. GitHub Pages serves the `gh-pages` branch, and `.github/workflows/pages.yml` force-pushes `docs/` to it (`git subtree split --prefix docs`) whenever `docs/` changes on `main`. Live at https://nice-bills.github.io/undying-ledger/.
 
 ### Preprod
 
