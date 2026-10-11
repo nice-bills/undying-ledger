@@ -234,10 +234,19 @@ function stampArt(kind: StampKind, id: string, text: string) {
 let stampCount = 0;
 const STAMP_R = rng(1209);
 
-type StampProps = { kind: StampKind; ink: 'carmine' | 'violet' | 'cobalt' | 'paid'; text?: string; style?: CSSProperties; id?: string; testId?: string };
+type StampProps = {
+  kind: StampKind;
+  ink: 'carmine' | 'violet' | 'cobalt' | 'paid';
+  text?: string;
+  style?: CSSProperties;
+  id?: string;
+  testId?: string;
+  /** Lay the stamp on a patch of the page's own paper, so ink under it (redaction bars) cannot show through. */
+  backed?: boolean;
+};
 
 /** A rubber stamp, invisible until stampDown() lands it. Each has its own ink filter and a small seeded tilt. */
-export const Stamp = forwardRef<HTMLDivElement, StampProps>(function Stamp({ kind, ink, text = '', style, id, testId }, ref) {
+export const Stamp = forwardRef<HTMLDivElement, StampProps>(function Stamp({ kind, ink, text = '', style, id, testId, backed }, ref) {
   const meta = useRef<{ n: number; r: string } | null>(null);
   if (!meta.current) {
     const n = stampCount++;
@@ -246,7 +255,7 @@ export const Stamp = forwardRef<HTMLDivElement, StampProps>(function Stamp({ kin
   }
   const { n, r } = meta.current;
   return (
-    <div ref={ref} id={id} data-testid={testId} className={`stamp ink-${ink}`} style={{ ...style, ['--r' as string]: r, ['--ink' as string]: `url(#ink${n % 6})` }}>
+    <div ref={ref} id={id} data-testid={testId} className={`stamp ink-${ink}${backed ? ' backed' : ''}`} style={{ ...style, ['--r' as string]: r, ['--ink' as string]: `url(#ink${n % 6})` }}>
       {stampArt(kind, `arc-${kind}-${n}`, text)}
     </div>
   );

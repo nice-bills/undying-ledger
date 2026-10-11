@@ -147,7 +147,7 @@ export function HusbandBeat({ e, active, go, announce }: BeatProps) {
             ))}
           </tbody>
         </table>
-        <Stamp ref={stamp} kind="cannot" ink="carmine" style={{ left: 104, top: 86, mixBlendMode: 'normal' }} testId="cannot" />
+        <Stamp ref={stamp} kind="cannot" ink="carmine" backed style={{ left: 104, top: 86, mixBlendMode: 'normal' }} testId="cannot" />
       </div>
       <p className="err" role="status" data-testid="err-open">
         {err}

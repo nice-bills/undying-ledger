@@ -90,6 +90,9 @@ h1.disp,h2.disp{font-size:46px;transform:rotate(-1.4deg);transform-origin:left b
 /* stamps: uneven ink, small seeded tilts */
 .stamp{position:absolute;pointer-events:none;mix-blend-mode:multiply;opacity:0;z-index:7;transform:rotate(var(--r,0deg))}
 .stamp svg{display:block;filter:var(--ink)}
+/* a backed stamp sits on a patch of clean paper above the redaction bars, so its words stay whole */
+.stamp.backed{z-index:9}
+.stamp.backed::before{content:"";position:absolute;inset:-1px;z-index:-1;background:var(--paper);clip-path:polygon(0 3%,100% 0,99.4% 97%,.6% 100%)}
 .ink-carmine{color:var(--carmine)} .ink-violet{color:var(--violet)} .ink-cobalt{color:var(--cobalt)} .ink-paid{color:var(--paid)}
 
 /* loose paper: outer polygon is the paper's edge tone, inner polygon is its face */
@@ -242,7 +245,9 @@ tr.fresh .skew{display:inline-block;transform:translateY(1px) rotate(.7deg)}
 
 /* live write-through (#/live after Lace connects): plain ruled forms on the same leaf */
 .consent{display:flex;align-items:flex-start;gap:10px;min-height:44px;padding:10px 0 0;font-size:14px;cursor:pointer}
-.consent input,.roles input{width:20px;height:20px;margin:1px 0 0;accent-color:var(--cloth);flex:none}
+.consent input,.roles input{appearance:none;width:22px;height:22px;margin:0;flex:none;border:1.5px solid var(--ink);border-radius:0;background:transparent;padding:3px;background-clip:content-box;cursor:pointer}
+.roles input{border-radius:50%}
+.consent input:checked,.roles input:checked{background-color:var(--cloth)}
 .roles{border:0;margin:14px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:4px 22px}
 .roles legend{padding:0;margin-bottom:4px}
 .roles label{display:flex;align-items:center;gap:8px;min-height:44px;font-size:15px;cursor:pointer}

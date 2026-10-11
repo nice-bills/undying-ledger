@@ -88,7 +88,8 @@ export function Meeting13Beat({ e, go, announce }: BeatProps) {
       <h2 className="disp" tabIndex={-1}>
         Meeting {MEETING13}
       </h2>
-      <p className="lede" style={{ maxWidth: '60%' }}>
+      {/* a fixed measure, so the lede wraps to two lines at 430 px too and the table header sits below the seal */}
+      <p className="lede" style={{ maxWidth: 'min(60%, 190px)' }}>
         {sunset ? 'The first meeting after sunset.' : 'The grant has not ended yet. Recording works either way.'}
       </p>
       <Stamp ref={seal} kind="seal" ink="carmine" text={String(MEETING13)} style={{ right: 6, top: 4 }} testId="seal13" />

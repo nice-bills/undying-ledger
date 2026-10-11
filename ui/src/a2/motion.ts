@@ -198,6 +198,8 @@ export async function stampDown(el: HTMLElement | null, page?: Element | null): 
   el.style.opacity = '1';
   el.dataset.down = '1';
   const rot = (d: number) => `rotate(${(r + d).toFixed(2)}deg)`;
+  // ink settles a little lighter as it dries; a stamp laid on its own paper patch stays opaque so nothing shows through
+  const dry = (o: number) => (el.classList.contains('backed') ? 1 : o);
   await anim(el, [{ transform: `translateY(-34px) scale(1.16) ${rot(-2.5)}`, opacity: 0 }, { transform: `translateY(0) scale(.975) ${rot(0.6)}`, opacity: 1 }], {
     duration: 200,
     easing: EASE_FALL,
@@ -211,10 +213,10 @@ export async function stampDown(el: HTMLElement | null, page?: Element | null): 
     el,
     [
       { transform: `scale(.975) ${rot(0.6)}`, opacity: 1 },
-      { transform: `scale(.99) ${rot(-1.4)}`, opacity: 0.97, offset: 0.3 },
-      { transform: `scale(1) ${rot(0.7)}`, opacity: 0.94, offset: 0.58 },
-      { transform: `scale(1) ${rot(-0.25)}`, opacity: 0.92, offset: 0.8 },
-      { transform: `scale(1) ${rot(0)}`, opacity: 0.9 },
+      { transform: `scale(.99) ${rot(-1.4)}`, opacity: dry(0.97), offset: 0.3 },
+      { transform: `scale(1) ${rot(0.7)}`, opacity: dry(0.94), offset: 0.58 },
+      { transform: `scale(1) ${rot(-0.25)}`, opacity: dry(0.92), offset: 0.8 },
+      { transform: `scale(1) ${rot(0)}`, opacity: dry(0.9) },
     ],
     { duration: 460, easing: 'cubic-bezier(.33,.9,.4,1)' },
   );
