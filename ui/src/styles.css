@@ -176,7 +176,7 @@ tr.fresh .skew{display:inline-block;transform:translateY(1px) rotate(.7deg)}
 
 /* beat 5 gauge */
 .gauge{margin-top:12px;width:64%}
-.m13 td{height:39px}
+.m13 td{height:36px}
 .gauge .scale{position:relative;height:28px;margin-top:6px;border-bottom:1px solid var(--ink)}
 .gauge .fill{position:absolute;left:0;bottom:6px;height:8px;width:100%;background:var(--ink);transform-origin:left center;transition:transform 380ms cubic-bezier(.23,1,.32,1)}
 .gauge .ticks{position:absolute;left:0;right:0;bottom:-1px;height:28px;background:repeating-linear-gradient(90deg,var(--ink) 0 1px,transparent 1px 10%)}

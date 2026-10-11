@@ -175,7 +175,6 @@ export function Meeting13Beat({ e, go, announce }: BeatProps) {
           {err}
         </p>
       </div>
-      <div style={{ height: 8 }} />
       {before && status === 'edit' && (
         <p className="note" style={{ marginBottom: 10 }}>
           Meeting {MEETING_NO} comes first.
