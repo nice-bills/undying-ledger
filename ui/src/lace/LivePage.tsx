@@ -78,6 +78,13 @@ export default function LivePage() {
 
   const connect = async () => {
     if (checking) return;
+    // `npm run dev` only: #/live?fake=1 swaps in a made-up session to look at the joined screens.
+    if (import.meta.env.DEV && new URLSearchParams(location.hash.split('?')[1] ?? '').has('fake')) {
+      const { fakeSession } = await import('./fake-session');
+      setLace('Dev preview: a made-up Lace session. Nothing here reaches Preprod.');
+      setLaceErr(false);
+      return setSession(fakeSession() as unknown as LiveSession);
+    }
     if (!findLace()) {
       setLaceErr(true);
       return setLace('No Lace wallet in this browser. Install Lace (Midnight), switch it to Preprod, then reload this page.');

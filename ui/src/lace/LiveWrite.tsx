@@ -17,7 +17,7 @@ const msgOf = (e: unknown) => {
   const m = e instanceof Error ? e.message : String(e);
   // circuit asserts come back inside Midnight.js errors; show the book's own words
   const a = /(Not enough shares|Sunset has happened[^"]*|Already sunset|The vendor is still[^"]*|You are not the member in this slot|Wrong group secret|Passbook does not match the ledger|Repayment is larger than the loan|failed assert[^"]*)/.exec(m);
-  return a && !(e as { code?: string })?.code ? `Refused by the book: ${a[1]}.` : m;
+  return a && !(e as { code?: string })?.code ? `Refused by the book: ${a[1].replace(/^failed assert:?\s*/i, '').replace(/\.$/, '')}.` : m;
 };
 
 export default function LiveWrite({ session, address, blockfrost }: { session: LiveSession; address: string; blockfrost: string }) {
@@ -353,9 +353,16 @@ export default function LiveWrite({ session, address, blockfrost }: { session: L
                 <button type="button" aria-label="Fewer shares" onClick={() => setMin((m) => Math.max(1, m - 1))} disabled={!!busy}>
                   −
                 </button>
-                <output className="num" aria-live="polite" data-testid="live-min">
-                  {min}
-                </output>
+                <input
+                  className="num stepnum"
+                  inputMode="numeric"
+                  aria-label="Shares at least"
+                  data-testid="live-min"
+                  value={min}
+                  disabled={!!busy}
+                  onChange={(ev) => setMin(Math.max(1, Math.min(999, Number(ev.target.value.replace(/\D/g, '').slice(0, 3)) || 1)))}
+                  onFocus={(ev) => ev.target.select()}
+                />
                 <button type="button" aria-label="More shares" onClick={() => setMin((m) => Math.min(999, m + 1))} disabled={!!busy}>
                   +
                 </button>

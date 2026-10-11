@@ -8,7 +8,7 @@ Built for the AKINDO Midnight Buildathon, Wave 2.
 
 ![The six beats of the demo: meeting 12, Ama's passbook, the husband's phone, sunset, meeting 13, the proof slip](media/strip.jpg)
 
-**Try it:** serve `docs/` with any static server (`npx serve docs`), or enable GitHub Pages (see [Deploying the demo](#deploying-the-demo)). The demo runs the **real compiled Compact circuits** in your browser through `@midnight-ntwrk/compact-runtime`. It needs no wallet, no network and no tokens. A one-minute recording of the built app is in [`media/demo.mp4`](media/demo.mp4).
+**Try it:** serve `docs/` with any static server (`npx serve docs`), or enable GitHub Pages (see [Deploying the demo](#deploying-the-demo)). The demo runs the **real compiled Compact circuits** in your browser through `@midnight-ntwrk/compact-runtime`. It needs no wallet, no network and no tokens. A one-minute recording of the built app is in [`media/demo.mp4`](media/demo.mp4); [`media/demo-narrated.mp4`](media/demo-narrated.mp4) is the same cut with a synthetic voice-over and English captions ([`media/demo.srt`](media/demo.srt)).
 
 ---
 
@@ -63,7 +63,7 @@ chain/      Preprod wiring: Midnight.js 4.1.1 deploy/join/call, Lace connect/che
             the group fee-key relay, deploy and measure scripts. Preprod via Blockfrost.
 e2e/        TesterArmy e2e suite: the six-beat story, the refusals and #/live without Lace, at 390x844 and 430x932
 docs/       the static build of ui/ for GitHub Pages (relative paths)
-media/      demo.mp4, six screenshots, record-demo.mjs
+media/      demo.mp4, demo-narrated.mp4 + demo.srt, six screenshots, live/ (joined-group screens from the dev preview), record-demo.mjs
 scripts/    preprod.sh: one command from clone to a measured Preprod deployment
 ```
 
@@ -132,6 +132,8 @@ npm ci
 npm test                      # 20 contract tests + 2 demo-story tests + 28 live-wiring tests (vitest)
 npm run typecheck             # contract, ui, chain
 npm run dev                   # the demo at http://localhost:5173
+                              # http://localhost:5173/#/live?fake=1 previews the joined live screens with a made-up
+                              # session (dev only; the production build drops it). Nothing reaches Preprod.
 npm run build                 # static build -> ui/dist, copied to docs/
 npm run test:e2e              # e2e suite against docs/ (cd e2e && npm ci first; see e2e/README.md)
 ```
