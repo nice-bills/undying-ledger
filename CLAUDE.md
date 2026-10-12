@@ -65,6 +65,12 @@ Pinned versions (Preprod support matrix, 9 Oct 2026): Compact 0.31.1, compact-ru
 - README: endowment paragraph at the top, Wave 3 roadmap. Deck spec (`make_spec.py`, project docs) reordered to lead with the endowment, with a Wave 3 slide and a `MEASURED` block to fill after Preprod.
 - Run `npm run typecheck && npm test` first on the laptop. If the relay commit breaks, revert it alone.
 
+**12 Oct, cloud session (no Lace)**
+- Verified: 895dadd typechecks and 50 tests pass. compactc 0.31.1 compiles the contract to the same committed output (keys regenerated). Proof server 8.1.0 healthy on :6300.
+- Written and typechecked, not yet run on Preprod: `chain/src/scripts/register-dust.ts` (`self`: deployer NIGHT to its own DUST; `endow`: deployer sends half its NIGHT to an NGO key, which registers it to `groupFeeKeyDustAddress`), `addresses.ts` (public addresses only), and `RELAY_URL`/`CALLER_SEED` relay mode in measure.ts.
+- Order on Preprod: seeds into `.preprod/wallets.env` (mode 600; DEPLOYER_SEED, NGO_SEED, CALLER_SEED, never printed) -> `npm run addresses -w chain` -> faucet to the deployer -> `register-dust self` -> `GRACE_SECONDS=300 scripts/preprod.sh deploy` -> `register-dust endow` -> relay -> `RELAY_URL=http://localhost:3001 scripts/preprod.sh measure --apply`.
+- Cloud container workarounds: start `dockerd` yourself; `compact update` fails behind the proxy, so download `https://github.com/midnightntwrk/compact/releases/download/compactc-v0.31.1/compactc_v0.31.1_x86_64-unknown-linux-musl.zip` and run its `compactc src/undying.compact ./src/managed/undying` from `contract/`; the proof server needs a compose override with `network_mode: host`, `ports: !reset []`, `/root/.ccr/ca-bundle.crt` mounted as `/etc/ssl/certs/ca-certificates.crt`, `SSL_CERT_FILE` and `HTTPS_PROXY` set, or it cannot fetch its parameters.
+
 **Ranked plan to win (rubric: Eng 40, QA 15, Product 15, UX 15, Comms 10, Biz 5)**
 1. Preprod deploy with contract address and tx hashes in the README.
 2. A recordMeeting paid by the group fee key, with the member at 0 DUST. Register tNIGHT to `groupFeeKeyDustAddress` first.
