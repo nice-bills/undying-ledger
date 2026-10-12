@@ -67,10 +67,9 @@ Pinned versions (Preprod support matrix, 9 Oct 2026): Compact 0.31.1, compact-ru
 - Never use `pkill -f <pattern>` in a tool command: it matches the tool's own shell.
 
 **Next steps, in order**
-3. Lace `payFees:false` run (owner): PREPROD.md step 9.
-4. Deck: the fee slide (still "~1 wk", no measured fee) gets the measured numbers; source is outside this repo.
-5. The owner rotates the Blockfrost token (it was printed once in a session log before the redaction fix).
-6. The owner submits on AKINDO personally. **Do not submit, post publicly, or spend money without the owner's explicit yes.** Aim for 17 Oct.
+1. Lace `payFees:false` on Preprod (owner, in a real browser with Lace and a throwaway wallet): PREPROD.md step 9. Cannot run in the cloud container (no extension, no wallet UI). If Lace refuses `payFees:false`, build the burner key in the member app (Wave 3 roadmap item 4) so the relay balances.
+2. Deck (Google Slides "Undying Ledger - AKINDO Midnight Buildathon", owner's Drive): slides 9, 12, 13 and 14 still describe the pre-Preprod state. Needs the Google Slides connector to edit in place.
+3. The owner submits on AKINDO personally. **Do not submit, post publicly, or spend money without the owner's explicit yes.** Aim for 17 Oct.
 
 ## Design rules (the owner's standing rules; do not drift)
 
