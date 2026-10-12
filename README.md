@@ -4,6 +4,8 @@
 
 Undying Ledger is a private record book for village savings and loan associations (VSLAs, also called susu groups or savings groups), built on [Midnight](https://midnight.network). It keeps working after the NGO grant and the app vendor are gone. Members hold no crypto and pay nothing. Their balances are hidden from outsiders, including a spouse who shares the household phone.
 
+**How it pays for itself.** Every fee is paid in DUST from one fee key per group. When the grant ends, the NGO registers NIGHT to that key once. The NIGHT keeps generating DUST for the group's meetings, and the NGO keeps the NIGHT. No other chain we looked at lets a fee key be handed to every member safely (see [Why Midnight](#why-midnight)).
+
 Built for the AKINDO Midnight Buildathon, Wave 2.
 
 ![The six beats of the demo: meeting 12, Ama's passbook, the husband's phone, sunset, meeting 13, the proof slip](media/strip.jpg)
@@ -163,6 +165,14 @@ npm run compact               # -> contract/src/managed/undying (contract/, zkir
 ### Preprod
 
 See **[PREPROD.md](PREPROD.md)** and `scripts/preprod.sh`: Docker proof server, Lace and the faucet, DUST registration, deploy, connecting the UI, and measuring the real fee and proof times so the UI can drop its 1 DUST placeholder. Preprod’s indexer and RPC moved to Blockfrost on 9 October 2026 and now need a project token.
+
+## Roadmap (Wave 3)
+
+1. **Groups of 30.** Six pages of five slots, matching the 15 to 30 members of a real VSLA.
+2. **Secretary recovery after sunset.** Today only the maintainer can replace a lost secretary, and sunset removes the maintainer. Members will be able to replace her by vote.
+3. **A standby fee key and a share-out circuit** for the end of the savings cycle.
+4. **A burner key inside the member app**, so a member needs no wallet at all and the relay adds the fee.
+5. **One pilot group.** The measure of success is whether the group is still recording six months after the NGO leaves.
 
 ## Known limits
 

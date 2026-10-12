@@ -59,6 +59,19 @@ Pinned versions (Preprod support matrix, 9 Oct 2026): Compact 0.31.1, compact-ru
 - The `#/live` write path has only been tested with a mocked Lace and mocked providers, plus the fake session. Say this plainly anywhere it comes up; never claim it works on-chain.
 - Running it needs Docker, a Blockfrost Preprod token, Lace on Preprod with a throwaway wallet, faucet tNIGHT, Generate tDUST, then `scripts/preprod.sh` and `measure --apply`, rebuild, and commit docs/. PREPROD.md has every step.
 
+**Written 12 Oct without a machine (not typechecked, not run; npm registry was unreachable)**
+- Relay logs the fee key's DUST address and returns it from `GET /health`; deploy writes it to `.preprod/group.json` as `groupFeeKeyDustAddress`. Uses `DustAddress.encodePublicKey` from wallet-sdk 1.2.0 and `DustSecretKey.publicKey`.
+- Relay refuses a call whose intents already carry DUST spends (`intent.dustActions.spends`), so a fee is never paid twice.
+- README: endowment paragraph at the top, Wave 3 roadmap. Deck spec (`make_spec.py`, project docs) reordered to lead with the endowment, with a Wave 3 slide and a `MEASURED` block to fill after Preprod.
+- Run `npm run typecheck && npm test` first on the laptop. If the relay commit breaks, revert it alone.
+
+**Ranked plan to win (rubric: Eng 40, QA 15, Product 15, UX 15, Comms 10, Biz 5)**
+1. Preprod deploy with contract address and tx hashes in the README.
+2. A recordMeeting paid by the group fee key, with the member at 0 DUST. Register tNIGHT to `groupFeeKeyDustAddress` first.
+3. If Lace rejects `payFees:false`: a burner key in the member app that the relay balances.
+4. Serve the proving keys from Pages so `#/live` can write from the public link (today they exist only under `npm run dev`).
+5. Re-record the video with one real on-chain write and the explorer view of that transaction.
+
 **Next steps, in order**
 1. Run Preprod (PREPROD.md). Fix whatever breaks in chain/ and the relay. Then run `measure --apply` so the UI shows real numbers instead of placeholders, rebuild docs/, and push.
 2. Once Preprod works, update the README "Not yet run" section, the deck slide on fees (slide 9 still says "~1 wk" and the fee label lacks "placeholder"), and the video if the live flow is shown.
