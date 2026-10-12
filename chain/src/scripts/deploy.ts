@@ -9,7 +9,7 @@
 //
 //   BLOCKFROST_PROJECT_ID=nightpreprod... DEPLOYER_SEED=<64 hex> npm run deploy:preprod -w chain
 
-import { writeFileSync } from 'node:fs';
+import { existsSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { makeLogger } from '../logger.js';
 import { indexerPublicDataProvider } from '@midnight-ntwrk/midnight-js-indexer-public-data-provider';
@@ -27,6 +27,10 @@ import { UndyingAPI } from '../api.js';
 import type { UndyingCircuitKeys, UndyingProviders } from '../common.js';
 
 const logger = makeLogger();
+// npm runs this from chain/, so resolve DEPLOY_OUT against the caller's directory, and check it
+// before deploying: the secrets exist only in this process until they are written.
+const deployOut = process.env['DEPLOY_OUT'] ? path.resolve(process.env['INIT_CWD'] ?? process.cwd(), process.env['DEPLOY_OUT']) : null;
+if (deployOut && !existsSync(path.dirname(deployOut))) throw new Error(`DEPLOY_OUT folder does not exist: ${path.dirname(deployOut)}`);
 const cfg = getConfig();
 setNetworkId(cfg.networkId);
 const zkConfigPath = path.resolve(import.meta.dirname, '../../../contract/src/managed/undying');
@@ -86,6 +90,6 @@ const secrets = JSON.stringify({
   groupFeeKeyDustAddress: DustAddress.encodePublicKey(cfg.networkId, DustSecretKey.fromSeed(feeKeySeed).publicKey),
 }, null, 2);
 // DEPLOY_OUT=<file> writes the secrets to a private file (mode 600) instead of the terminal.
-if (process.env['DEPLOY_OUT']) writeFileSync(process.env['DEPLOY_OUT'], secrets + '\n', { mode: 0o600 });
+if (deployOut) writeFileSync(deployOut, secrets + '\n', { mode: 0o600 });
 else console.log(secrets);
 await wallet.stop();

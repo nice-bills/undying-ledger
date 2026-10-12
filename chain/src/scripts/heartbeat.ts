@@ -30,7 +30,9 @@ const env = (k: string): string => {
 const cfg = getConfig();
 setNetworkId(cfg.networkId);
 const zkConfigPath = path.resolve(import.meta.dirname, '../../../contract/src/managed/undying');
-const group = JSON.parse(readFileSync(env('GROUP_JSON'), 'utf8')) as { contract: string; groupSecret: string; maintainerSecret: string; secretarySecret: string };
+// npm runs this from chain/: resolve paths against the caller's directory.
+const fromCaller = (p: string) => path.resolve(process.env['INIT_CWD'] ?? process.cwd(), p);
+const group = JSON.parse(readFileSync(fromCaller(env('GROUP_JSON')), 'utf8')) as { contract: string; groupSecret: string; maintainerSecret: string; secretarySecret: string };
 
 const wallet = await MidnightWalletProvider.build(logger as never, { walletNetworkId: cfg.networkId, ...cfg } as never, { kind: 'seed', value: env('DEPLOYER_SEED') });
 await wallet.start();
@@ -85,6 +87,6 @@ const out = {
   at: new Date().toISOString(),
 };
 console.log(JSON.stringify(out, null, 2));
-if (process.env['HEARTBEAT_OUT']) writeFileSync(process.env['HEARTBEAT_OUT'], JSON.stringify(out, null, 2) + '\n');
+if (process.env['HEARTBEAT_OUT']) writeFileSync(fromCaller(process.env['HEARTBEAT_OUT']), JSON.stringify(out, null, 2) + '\n');
 await wallet.stop();
 process.exit(0);
