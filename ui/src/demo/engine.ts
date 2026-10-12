@@ -17,7 +17,7 @@ import {
   toHex,
   ZERO_PASSBOOK,
 } from '@undying-ledger/contract';
-import { ASSUMED_FEE_DUST, FeeCommons } from './fees';
+import { ASSUMED_FEE_DUST, FeeCommons, formatDust, KEY_SPEND_PER_CALL_DUST } from './fees';
 
 export const SHARE_VALUE_GHS = 10;
 export const SOCIAL_FUND_GHS = 2;
@@ -121,16 +121,16 @@ export class DemoEngine {
   }
 
   private feeNote(): string {
-    return `${ASSUMED_FEE_DUST} DUST from group fee key #${this.fees.epoch}`;
+    return `${formatDust(ASSUMED_FEE_DUST)} from group fee key #${this.fees.epoch}`;
   }
 
   /** Pay the fee for one transaction from the group fee key, or throw before touching the ledger. */
   private withFee<T>(txs: number, f: () => T): T {
-    if (!this.fees.canPay(ASSUMED_FEE_DUST * txs)) {
+    if (!this.fees.canPay(KEY_SPEND_PER_CALL_DUST * txs)) {
       throw new Error('The group fee key is out of DUST. It refills on its own; or rotate to a fresh key.');
     }
     const out = f();
-    for (let i = 0; i < txs; i++) this.fees.pay(ASSUMED_FEE_DUST, true);
+    for (let i = 0; i < txs; i++) this.fees.pay(KEY_SPEND_PER_CALL_DUST, true);
     return out;
   }
 
@@ -343,13 +343,12 @@ export class DemoEngine {
   }
 
   /** Someone copies the fee key out of the app and burns fees on junk transactions. */
-  leakAndBurn(txs: number): void {
-    let burned = 0;
-    while (burned < txs && this.fees.canPay()) {
-      this.fees.pay(ASSUMED_FEE_DUST, false);
-      burned++;
-    }
-    this.say('Someone with a copied key', `Burned ${burned} DUST on junk transactions. They cannot move any money or NIGHT, and they cannot write to the book.`, 'error');
+  /** A copied fee key can only spend DUST on fees. Real fees are tiny (1 SPECK on Preprod), but a
+   *  junk transaction can overpay, so the key can still be emptied: burn up to `dust` DUST. */
+  leakAndBurn(dust: number): void {
+    const burned = Math.min(dust, this.fees.balance);
+    if (burned > 0) this.fees.pay(burned, false);
+    this.say('Someone with a copied key', `Burned ${formatDust(burned)} on junk transactions with inflated fees. They cannot move any money or NIGHT, and they cannot write to the book.`, 'error');
     this.changed();
   }
 

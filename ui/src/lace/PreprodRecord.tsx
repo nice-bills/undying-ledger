@@ -2,12 +2,13 @@
 // What actually ran on Preprod (ui/src/demo/preprod.ts), shown without a wallet or a token:
 // the contract and the transactions, each a link anyone can check on the explorer.
 import { contractLink, PREPROD_RUN, txLink, type PreprodTx } from '../demo/preprod';
+import { formatDust } from '../demo/fees';
 
 const short = (h: string) => `${h.slice(0, 8)}…${h.slice(-6)}`;
 const SPECK = 10n ** 15n;
 const dust = (speck: string) => {
   const s = BigInt(speck);
-  return `${s / SPECK}.${(s % SPECK).toString().padStart(15, '0').slice(0, 3)}`;
+  return s === 0n ? '0' : `${s / SPECK}.${(s % SPECK).toString().padStart(15, '0').slice(0, 3)}`;
 };
 
 function Line({ label, tx }: { label: string; tx: PreprodTx }) {
@@ -19,7 +20,7 @@ function Line({ label, tx }: { label: string; tx: PreprodTx }) {
           {short(tx.txHash)}
         </a>
       </td>
-      <td className="r num">{tx.feeDust} DUST</td>
+      <td className="r num">{formatDust(Number(tx.feeDust))}</td>
     </tr>
   );
 }

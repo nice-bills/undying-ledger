@@ -9,10 +9,14 @@ import { ERROR_TRAP } from './helpers';
 
 test('#/live renders and says there is no Lace wallet', { tags: ['live'] }, async ({ app, screen, browser }) => {
   await browser.addInitScript(ERROR_TRAP);
-  await app.open('/#/live');
+  // a malformed ?contract= wins over the address of the recorded Preprod run, so the refusal below is exercised
+  await app.open('/#/live?contract=not-an-address');
   const live = screen.getByTestId('live');
   await expect(live.getByRole('heading', 'The public register')).toBeVisible();
   await expect(live.getByTestId('lace-status')).toContainText('No Lace wallet');
+  // the recorded Preprod run is shown with no wallet and no token
+  await expect(live.getByTestId('preprod-record')).toContainText('Ran on Preprod');
+  await expect(live.getByTestId('preprod-record')).toContainText('recordMeeting');
 
   // Tapping the check gives the install hint, and no write controls appear without a wallet.
   await live.getByRole('button', 'Check my Lace setup').tap();

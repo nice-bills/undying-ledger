@@ -61,7 +61,7 @@ test('the six-beat story: record, passbook, husband, sunset, meeting 13, proof',
   await b4.getByRole('button', 'Stamp and record meeting 13').tap();
   await expect(b4.getByRole('button', 'Ama applies for a loan')).toBeVisible();
   await expect(b4.getByTestId('after13')).toContainText('with no vendor');
-  await expect(b4.getByTestId('after13')).toContainText('DUST');
+  await expect(b4.getByTestId('after13')).toContainText('from the group fee key');
 
   // 6. Ama proves "at least N shares". 33 is refused by the circuit (she holds 32); 30 works.
   await b4.getByRole('button', 'Ama applies for a loan').tap();

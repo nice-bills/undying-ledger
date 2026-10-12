@@ -5,7 +5,7 @@
 import { useRef, useState } from 'react';
 import { Phase } from '@undying-ledger/contract';
 import { type MeetingLine, SHARE_VALUE_GHS } from '../demo/engine';
-import { ASSUMED_FEE_DUST, FEE_IS_MEASURED } from '../demo/fees';
+import { FEE_IS_MEASURED, FEE_TEXT } from '../demo/fees';
 import { Ghs } from '../a2/paper';
 import { CashBox, Figure, KeyTag, Screen, Seal } from '../box/art';
 import { anim, coinsInto, countTo, pop, rise, wait } from '../box/motion';
@@ -82,7 +82,7 @@ export function Meeting13Beat({ e, go, announce }: BeatProps) {
     await wait(60);
     await pop(paid.current, 5);
     setStatus('done');
-    announce(`Meeting ${MEETING13} recorded${sunset ? ' after sunset' : ''}. ${ASSUMED_FEE_DUST} DUST paid by the group fee key.`);
+    announce(`Meeting ${MEETING13} recorded${sunset ? ' after sunset' : ''}. ${FEE_TEXT} paid by the group fee key.`);
   };
 
   return (
@@ -106,7 +106,7 @@ export function Meeting13Beat({ e, go, announce }: BeatProps) {
           <i ref={fill} style={{ transform: `scaleX(${pct.toFixed(4)})` }} />
         </div>
         <p className="note">
-          Refills from the NGO’s one-time endowment. Members hold no DUST.{FEE_IS_MEASURED ? '' : ` ${ASSUMED_FEE_DUST} DUST a call is a placeholder.`}
+          Refills from the NGO’s one-time endowment. Members hold no DUST.{FEE_IS_MEASURED ? '' : ` ${FEE_TEXT} a call is a placeholder.`}
         </p>
       </div>
       <section className="sheet" aria-label="Meeting 13 shares">

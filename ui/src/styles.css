@@ -240,6 +240,7 @@ a{color:inherit}
 .ledger th{font:700 12.5px/1.2 var(--sans);color:var(--ink2);text-align:left;padding:0 0 8px;border-bottom:2px solid var(--ink)}
 .ledger td{height:44px;border-bottom:1px solid var(--rule);padding:0;vertical-align:middle}
 .ledger .r{text-align:right}
+.ledger tbody th{font:700 14px/1.2 var(--sans);text-align:left;padding:0 8px 0 0;border-bottom:1px solid var(--rule)}
 .leaf .pub{margin:14px 0 0}
 .leaf .pub .label,.leaf .pub .note{color:var(--ink2)}
 .leaf .pub b{color:var(--ink)}

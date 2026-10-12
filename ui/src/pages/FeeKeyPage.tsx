@@ -4,7 +4,7 @@
 // the book, time refills it, and the group can rotate to a fresh key.
 import { useEffect, useRef } from 'react';
 import type { DemoEngine } from '../demo/engine';
-import { ASSUMED_FEE_DUST, FEE_IS_MEASURED, SECONDS_TO_CAP } from '../demo/fees';
+import { FEE_IS_MEASURED, FEE_TEXT, SECONDS_TO_CAP } from '../demo/fees';
 import { MEASURED } from '../demo/measured';
 import { Leaf } from '../a2/paper';
 
@@ -47,7 +47,7 @@ export function FeeKeyPage({ e }: { e: DemoEngine }) {
           </p>
           <p>
             DUST only pays fees. It cannot be sent to anyone, and the NIGHT that makes it stays with its owner. Each call costs{' '}
-            {FEE_IS_MEASURED ? `${ASSUMED_FEE_DUST} DUST, measured on Preprod${MEASURED.measuredOn ? ` (${MEASURED.measuredOn})` : ''}` : `${ASSUMED_FEE_DUST} DUST here, a placeholder until the fee is measured on Preprod`}.
+            {FEE_IS_MEASURED ? `${FEE_TEXT}, measured on Preprod${MEASURED.measuredOn ? ` (${MEASURED.measuredOn})` : ''}` : `${FEE_TEXT} here, a placeholder until the fee is measured on Preprod`}.
           </p>
         </div>
         <h3 className="label" style={{ marginTop: 18 }}>

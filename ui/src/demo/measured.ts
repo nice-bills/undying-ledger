@@ -15,7 +15,7 @@ export type Measured = {
 };
 
 export const MEASURED: Measured = {
-  feeDustPerTx: null,
-  proofSeconds: { recordMeeting: null, attestSavings: null },
-  measuredOn: null,
+  feeDustPerTx: 1e-15,
+  proofSeconds: { recordMeeting: 3.9, attestSavings: 3.8},
+  measuredOn: "2026-10-12, Preprod, proof-server 8.1.0",
 };

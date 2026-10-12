@@ -4,7 +4,7 @@
 // the lid, the three padlocks click shut and the seal lands. Every figure comes from the engine.
 import { useRef, useState } from 'react';
 import { type MeetingLine, SHARE_VALUE_GHS, SOCIAL_FUND_GHS } from '../demo/engine';
-import { ASSUMED_FEE_DUST, FEE_IS_MEASURED } from '../demo/fees';
+import { FEE_IS_MEASURED, FEE_TEXT } from '../demo/fees';
 import { MEASURED } from '../demo/measured';
 import { Ghs } from '../a2/paper';
 import { CashBox, Figure, KeyTag, Screen, Seal } from '../box/art';
@@ -24,10 +24,10 @@ export function provingNote(kind: 'recordMeeting' | 'attestSavings') {
     : 'Simulator: the real circuit runs here and makes no proof. Preprod proof time is not measured yet.';
 }
 
-export const feeWords = () => (FEE_IS_MEASURED ? `${ASSUMED_FEE_DUST} DUST` : `${ASSUMED_FEE_DUST} DUST (placeholder)`);
+export const feeWords = () => (FEE_IS_MEASURED ? `${FEE_TEXT}, measured on Preprod` : `${FEE_TEXT} (placeholder)`);
 /** Short form for receipts: the measured fee, or the placeholder marked "est.". */
 export const feeShort = () =>
-  FEE_IS_MEASURED ? `${Number(ASSUMED_FEE_DUST.toPrecision(3))} DUST` : `${ASSUMED_FEE_DUST} DUST est.`;
+  FEE_IS_MEASURED ? FEE_TEXT : `${FEE_TEXT} est.`;
 
 /** Shared by meeting 12 and 13: shut the box after a recorded meeting, lock by lock. */
 export async function shutTheBox(box: SVGSVGElement | null) {
