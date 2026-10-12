@@ -23,11 +23,11 @@ Undying Ledger is a private record book for a village savings and loan associati
 | `contract/src/managed/` | compactc output (keys/ is gitignored and regenerated with `npm run compact`) |
 | `chain/src/` | Midnight.js 4.1.1 wiring: config.ts (Blockfrost Preprod), api.ts, browser.ts (Lace connect, check and build; `payFees:false` plus the relay), wallet.ts, scripts/deploy.ts, scripts/measure.ts, relay/fee-key-relay.ts |
 | `chain/compose.yml` | proof server (`midnightntwrk/proof-server:8.1.0`) |
-| `ui/` | Vite + React app. A six-beat demo story (`ui/src/beats`, `ui/src/a2` design system) runs the real compiled circuits in the browser with no wallet. `#/live` is the Lace write path (`ui/src/lace/live-session.ts`, `LiveWrite.tsx`). `#/live?fake=1` is a dev-only fake session that is stripped from the production build. |
+| `ui/` | Vite + React app. A six-beat demo story (`ui/src/beats`, `ui/src/box` cash-box art and motion; `ui/src/a2` keeps the shared motion helpers) runs the real compiled circuits in the browser with no wallet. `#/live` is the Lace write path (`ui/src/lace/live-session.ts`, `LiveWrite.tsx`). `#/live?fake=1` is a dev-only fake session that is stripped from the production build. |
 | `ui/src/demo/measured.ts` | Measured fee and proof time. Null until Preprod runs; `ui/scripts/set-measured.mjs` writes it. While it is null the UI says "placeholder". |
 | `e2e/` | tester.army e2e suite (six-beat story, refusals, legal links, console errors, `#/live` smoke) |
 | `docs/` | Production build. Pages serves the `gh-pages` branch, which `.github/workflows/pages.yml` keeps equal to `docs/`. |
-| `media/` | demo.mp4 (61.3s), demo-narrated.mp4 (60.7s, synthetic en-NG voice, edge-tts `en-NG-EzinneNeural`), demo.srt, screens/, live/, strip.jpg, record-demo.mjs |
+| `media/` | demo.mp4 (84s, cash-box UI), demo-narrated.mp4 (84s; the synthetic en-NG voice from the earlier cut, edge-tts `en-NG-EzinneNeural`, re-timed to the new beats), demo.srt, screens/, live/, strip.jpg, record-demo.mjs |
 | `scripts/preprod.sh` | One-command Preprod run: `check \| up \| deploy \| measure [--apply] \| down` |
 
 ## Commands
@@ -86,9 +86,9 @@ Pinned versions (Preprod support matrix, 9 Oct 2026): Compact 0.31.1, compact-ru
 
 ## Design rules (the owner's standing rules; do not drift)
 
-The UI is the "A2 Passbook" concept: cloth, paper and ink that change per beat, tilted stamps, tucked-in slips, handwritten pen notes. Numbers always stay level. Fonts are Libre Caslon Text and Display, Schibsted Grotesk, and Reenie Beanie, self-hosted.
+The UI is the **cash box** concept (chosen by the owner on 12 Oct 2026 over the earlier "A2 Passbook"): the VSLA's tin box with three padlocks, emerald (#0E5A43) and saffron (#F4B23A) on cream, huge condensed Archivo numbers (variable width, `font-stretch` 62%), Schibsted Grotesk for text, brass key tags, coins for shares, round seals. Art and motion live in `ui/src/box/`. Every animation follows a real action: coins drop in and locks click shut on a recorded meeting, her lock opens on her phone, all locks rattle on a refused open, the vendor's red lock falls off at sunset, the fee tank drains by the fee, the proof note rises from the slot (and drops back on a refusal). Numbers stay level. Fonts are self-hosted.
 
-Hard bans: harsh gradients, Lucide icons, pure white backgrounds, rainbow colours, drop shadows, three feature cards in a row, emoji, liquid glass, em dashes in copy, Inter, Geist or Space Grotesk, coloured left stripes, fake testimonials, bento grids, terminal windows, "It's not X, it's Y" phrasing, checkmark bullets, three pricing tiers, soft corner radius (keep it at 4px or less), purple and black, radial orbs, dot grids, sparkle icons, animated arrows, hover animations, neon, basic pastels. No brutalist or terminal themes, nothing cartoony.
+Rounded iOS-style pills and sheets are allowed in the cash-box design (the owner approved this; the old 4px cap applied to the passbook). Hard bans: harsh gradients, Lucide icons, pure white backgrounds, rainbow colours, drop shadows, three feature cards in a row, emoji, liquid glass, em dashes in copy, Inter, Geist or Space Grotesk, coloured left stripes, fake testimonials, bento grids, terminal windows, "It's not X, it's Y" phrasing, checkmark bullets, three pricing tiers, purple and black, radial orbs, dot grids, sparkle icons, animated arrows, hover animations, neon, basic pastels. No brutalist or terminal themes, nothing cartoony.
 
 Always include: a real product demo, skeleton loaders, and Terms and Privacy links. Motion has to mean something, tied to real actions. Tap targets are 44px or more. Wrap hover styles in `(hover: hover) and (pointer: fine)`. Use `tabular-nums` on numbers that change, keep focus rings visible, and meet WCAG AA contrast.
 

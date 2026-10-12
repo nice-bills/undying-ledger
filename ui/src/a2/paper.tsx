@@ -27,37 +27,17 @@ export function Ghs({ n }: { n: number }) {
 
 // ------------------------------------------------------------------ leaf
 
-let leafSeed = 40;
-
 type LeafProps = {
   band: [ReactNode, ReactNode];
+  /** Kept for callers from the passbook design; the cash-box sheet has no folded corner. */
   dog?: boolean;
   children: ReactNode;
   sheetId?: string;
   sheetRef?: React.Ref<HTMLDivElement>;
 };
 
-/** An open page on its cloth cover: under-pages at the fore-edge, top edge dipping into the spine, deckled edges. */
-export function Leaf({ band, dog, children, sheetId, sheetRef }: LeafProps) {
-  const face = useRef<HTMLDivElement>(null);
-  const u1 = useRef<HTMLDivElement>(null);
-  const u2 = useRef<HTMLDivElement>(null);
-  const seed = useRef(0);
-  if (!seed.current) seed.current = (leafSeed += 3);
-  useLayoutEffect(() => {
-    const s = seed.current;
-    if (face.current)
-      face.current.style.clipPath = edgePoly({
-        seed: s,
-        top: { amp: 1.2, n: 40, spine: 7 },
-        right: { kind: 'deckle', amp: 2.2, n: 120 },
-        bottom: { kind: 'deckle', amp: 2, n: 50 },
-        fold: dog ? 26 : 0,
-      });
-    [u1.current, u2.current].forEach((u, i) => {
-      if (u) u.style.clipPath = edgePoly({ seed: s + 1 + i, top: { amp: 1, n: 30, spine: 9 }, right: { kind: 'deckle', amp: 2.6, n: 110 }, bottom: { kind: 'deckle', amp: 2.4, n: 40 } });
-    });
-  }, [dog]);
+/** A page outside the story (fee key, terms, privacy, live): a header band and one sheet that rises over the world colour. */
+export function Leaf({ band, children, sheetId, sheetRef }: LeafProps) {
   return (
     <>
       <div className="band">
@@ -65,18 +45,8 @@ export function Leaf({ band, dog, children, sheetId, sheetRef }: LeafProps) {
         <span>{band[1]}</span>
       </div>
       <div className="leaf">
-        <div className="under u2" ref={u2} />
-        <div className="under u1" ref={u1} />
         <div className="sheet" id={sheetId} ref={sheetRef}>
-          <div className="face" ref={face} />
-          <div className="spine">
-            <i />
-            <i />
-            <i />
-          </div>
-          {dog && <div className="dog" />}
           {children}
-          <svg className="penlayer" aria-hidden="true" />
         </div>
       </div>
     </>

@@ -10,7 +10,7 @@ Built for the AKINDO Midnight Buildathon, Wave 2.
 
 ![The six beats of the demo: meeting 12, Ama's passbook, the husband's phone, sunset, meeting 13, the proof slip](media/strip.jpg)
 
-**Try it live:** https://nice-bills.github.io/undying-ledger/ (or serve `docs/` with any static server: `npx serve docs`). The demo runs the **real compiled Compact circuits** in your browser through `@midnight-ntwrk/compact-runtime`. It needs no wallet, no network and no tokens. A one-minute recording of the built app is in [`media/demo.mp4`](media/demo.mp4); [`media/demo-narrated.mp4`](media/demo-narrated.mp4) is the same cut with a synthetic voice-over and English captions ([`media/demo.srt`](media/demo.srt)).
+**Try it live:** https://nice-bills.github.io/undying-ledger/ (or serve `docs/` with any static server: `npx serve docs`). The demo runs the **real compiled Compact circuits** in your browser through `@midnight-ntwrk/compact-runtime`. It needs no wallet, no network and no tokens. An 84-second recording of the built app is in [`media/demo.mp4`](media/demo.mp4); [`media/demo-narrated.mp4`](media/demo-narrated.mp4) is the same cut with a synthetic voice-over and English captions ([`media/demo.srt`](media/demo.srt)).
 
 ---
 
@@ -38,16 +38,16 @@ Other chains fall short. Celo fee abstraction still needs the user to hold cUSD,
 
 ## The demo, in six beats
 
-The UI is a printed VSLA passbook ("A2 Passbook"): cloth covers that change colour with each beat, deckled ivory leaves, rubber stamps with uneven ink, carbon slips, a ballpoint that ticks the members off, and an amber light that leans across the page only while the vendor's grace period runs down. Every figure on screen comes from `DemoEngine` running the compiled circuits; nothing is hard-coded.
+The UI is built on the object every VSLA already trusts: the **cash box** with three padlocks, each key held by a different member. Each member's shares are coins she taps in; when the meeting is recorded the coins drop through the lid, the lid shuts and the padlocks click closed one by one. Ama's own padlock springs open on her phone; on her husband's phone every lock rattles and stays shut; at sunset the vendor's red padlock falls off the box. Emerald and saffron, huge condensed numbers, and every animation follows a real circuit result or tap. Every figure on screen comes from `DemoEngine` running the compiled circuits; nothing is hard-coded.
 
 | # | Beat | What actually runs |
 |---|---|---|
-| 1 | **Fuseina records meeting 12** (bottle-green minute book) | `recordMeeting` re-commits all 5 passbooks; every member’s phone checks its stamp against the new commitment. The receipt says the group fee key paid and members paid nil. |
-| 2 | **Ama’s passbook** (oxblood) | Line 12 prints in: 26 → 29 shares (GH₵290), her GH₵150 loan is cleared, and the stamp is verified against the on-chain commitment with the group secret. |
-| 3 | **Her husband’s phone** (slate) | Only public state: 5 member keys, 12 meetings, one sealed commitment per slot, no SMS. “Try to open slot 0” runs the stamp check with a guessed group secret and the exact figures, and fails. |
-| 4 | **The grant ends** (dusk) | The vendor’s heartbeats stop. Calling `sunset()` early is refused by the contract (“The maintainer is still sending heartbeats”). After the grace period, any member calls it; the vendor key is erased. |
-| 5 | **Meeting 13 still records** | `recordMeeting` with no vendor and no admin key; the fee comes off the group fee key gauge. |
-| 6 | **Prove savings, keep the amount** (blue security paper) | `attestSavings` proves “at least 30 shares” for a loan officer. Asking for 33 when she holds 32 is refused by the circuit, and the slip is withdrawn. |
+| 1 | **Fuseina records meeting 12** | `recordMeeting` re-commits all 5 passbooks; every member’s phone checks its stamp against the new commitment. The coins go into the box, it locks, the seal lands, and the receipt says the group fee key paid and members paid nothing. |
+| 2 | **Ama’s book** | Her padlock opens; meeting 12 slides in: 26 → 29 shares (GH¢290), her GH¢150 loan is cleared, and the stamp is verified against the on-chain commitment with the group secret. A share-out card counts the meetings left in the cycle; **Lock now** hides the screen on a shared phone. |
+| 3 | **Her husband’s phone** | Only public state: 5 member keys, 12 meetings, one sealed commitment per slot, no SMS. “Try to open slot 0” runs the stamp check with a guessed group secret and the exact figures, and fails. |
+| 4 | **The grant ends** | The vendor’s heartbeats stop and the screen moves toward dusk only as the contract’s grace clock runs down. Calling `sunset()` early is refused by the contract (“The maintainer is still sending heartbeats”). After the grace period, any member calls it; the vendor key is erased and its padlock falls off the box. |
+| 5 | **Meeting 13 still records** | `recordMeeting` with no vendor and no admin key; the fee-key tank drains by exactly the fee. |
+| 6 | **Prove savings, keep the amount** | `attestSavings` proves “at least 30 shares” for a loan officer; the note rises out of the box’s slot. Asking for 33 when she holds 32 is refused by the circuit, and the note drops back in. |
 
 Also in the app: a **fee key page** (a relative points their NIGHT’s DUST at the key, a leaked key burns DUST but cannot write the book, time refills it, rotation starts a fresh key), **Terms** and **Privacy** pages, and a **live page** for a group deployed on Preprod (`#/live`): anyone can read its public register, and with Lace a member can join it by address and act on it (record a meeting, open their own passbook, prove at least N shares, call sunset). The live write path is wired and unit-tested with a mocked Lace, but has not been run against Preprod yet (see Known limits).
 
@@ -58,7 +58,7 @@ The simulator makes no zero-knowledge proofs, so the proving skeletons stay up f
 ```
 contract/   undying.compact (8 circuits, Compact 0.31.1) + witnesses + a no-wallet simulator + 20 unit tests
 ui/         React 19 + Vite. src/demo: DemoEngine (simulator), fee-key model, measured.ts
-            src/beats: the six beats; src/a2: paper, stamps, pen and motion; src/pages: fee key, Terms, Privacy
+            src/beats: the six beats; src/box: the cash box art and motion; src/pages: fee key, Terms, Privacy
             src/lace: the Preprod live page: public register, then Lace write-through (LiveSession,
             LiveWrite). Lazy-loaded: the demo never ships Midnight.js; the write path loads after Lace connects
 chain/      Preprod wiring: Midnight.js 4.1.1 deploy/join/call, Lace connect/check/providers (payFees:false),
@@ -191,7 +191,7 @@ See **[PREPROD.md](PREPROD.md)** and `scripts/preprod.sh`: Docker proof server, 
 - **Time, not blocks.** The heartbeat window is in seconds of block time (90 s in the demo, 7 days by default on deploy).
 - **Up to 10 members per contract**, recorded as 2 pages of 5. Real VSLAs have 15 to 30 members.
 - **Transient commitments.** Passbooks use Poseidon `transientCommit` (k=14 instead of 17), which Compact does not promise to keep stable across language versions; a future upgrade would re-commit the passbooks.
-- **Design:** the handwriting face (Reenie Beanie) is used only for short notes; none of the faces has a ₵ glyph, so the cedi is drawn as a C with a stroke and read out as ₵ by screen readers.
+- **Design:** prices are written GH¢, as in Ghanaian shops and markets (the faces have no ₵ glyph); screen readers hear ₵.
 
 ## Attribution
 

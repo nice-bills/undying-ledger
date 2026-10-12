@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
-// Undying Ledger, "A2 Passbook". Six beats of the demo story, all driven by the real compiled
+// Undying Ledger, "the cash box". Six beats of the demo story, all driven by the real compiled
 // Compact circuits through DemoEngine (compact-runtime in this browser). Only the presentation
 // is new; engine.ts, fees.ts and the contract are the same logic the tests exercise.
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { DemoEngine } from './demo/engine';
-import { InkDefs } from './a2/paper';
-import { pageTurn, RM } from './a2/motion';
+import { RM } from './a2/motion';
+import { push } from './box/motion';
 import { MeetingBeat } from './beats/MeetingBeat';
 import { PassbookBeat } from './beats/PassbookBeat';
 import { HusbandBeat } from './beats/HusbandBeat';
@@ -31,11 +31,11 @@ export const LABELS = [
 
 const BEATS: { C: (p: BeatProps) => React.ReactElement; world: string }[] = [
   { C: MeetingBeat, world: 'w-green' },
-  { C: PassbookBeat, world: 'w-ox' },
+  { C: PassbookBeat, world: 'w-green' },
   { C: HusbandBeat, world: 'w-slate' },
-  { C: SunsetBeat, world: 'w-green' },
+  { C: SunsetBeat, world: 'w-green w-dusk' },
   { C: Meeting13Beat, world: 'w-green' },
-  { C: ProveBeat, world: 'w-ox' },
+  { C: ProveBeat, world: 'w-saf' },
 ];
 
 function useEngine(): DemoEngine {
@@ -101,7 +101,7 @@ export default function App() {
     const b = sections.current[cur];
     if (b) b.scrollTop = 0;
     let gone = false;
-    (a && b && !RM ? pageTurn(a, b, cur > prev ? 1 : -1) : Promise.resolve()).then(() => {
+    (a && b && !RM ? push(a, b, cur > prev ? 1 : -1) : Promise.resolve()).then(() => {
       if (gone) return;
       turning.current = false;
       setPrev(null);
@@ -138,7 +138,6 @@ export default function App() {
 
   return (
     <div id="app">
-      <InkDefs />
       <div id="live" className="vh" aria-live="polite" ref={live} />
       <div hidden={!!page}>
         {BEATS.map(({ C, world }, i) => (

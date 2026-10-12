@@ -1,20 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
-// Beat 2: Ama's own passbook on her phone. Rows are her real stamps; the newest one is printed
-// in when she opens the page, then checked against the on-chain commitment with the group secret.
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+// Beat 2: Ama's own book on her phone. Her padlock (the middle one) springs open with her key,
+// the newest line slides in, her shares count up, and the line is checked against the on-chain
+// commitment with the group secret before the "matches" seal lands. "Lock now" hides it all.
+import { useEffect, useRef, useState } from 'react';
 import { SHARE_VALUE_GHS } from '../demo/engine';
-import { Ced, Ghs, Leaf, Stamp } from '../a2/paper';
-import { circlePath, countTo, draw, linePath, printLine, rel, stampDown, wait } from '../a2/motion';
+import { Ghs } from '../a2/paper';
+import { CashBox, Figure, LockNow, Screen, Seal } from '../box/art';
+import { anim, countTo, lock, pop, rise, wait } from '../box/motion';
 import type { BeatProps } from './types';
 
-/** A figure the page counts up imperatively; React only sets the resting value. */
-function Count({ value, id, testId, innerRef }: { value: number; id?: string; testId?: string; innerRef: React.RefObject<HTMLSpanElement | null> }) {
-  const ref = innerRef;
-  useLayoutEffect(() => {
-    if (ref.current && !ref.current.dataset.counting) ref.current.textContent = String(value);
-  }, [value]);
-  return <span ref={ref} id={id} data-testid={testId} className="num" />;
-}
+/** A VSLA cycle here runs 36 meetings, then the box is opened and everyone takes her savings home. */
+export const CYCLE_MEETINGS = 36;
 
 export function PassbookBeat({ e, active, go, announce }: BeatProps) {
   const ama = e.members[0];
@@ -22,142 +18,128 @@ export function PassbookBeat({ e, active, go, announce }: BeatProps) {
   const newest = ama.stamps[0];
   const [printed, setPrinted] = useState(() => newest?.meeting ?? 0);
   const fresh = newest && newest.meeting > printed ? newest : null;
-  const shown = fresh ? ama.stamps[1] : newest; // the figures as of the last printed line
-  const [shownShares, setShownShares] = useState<number | null>(null);
-  const [printedSet, setPrintedSet] = useState<number[]>([]);
-  const sheet = useRef<HTMLDivElement>(null);
-  const tableRef = useRef<HTMLTableElement>(null);
+  const shown = fresh ? ama.stamps[1] : newest; // figures as of the last line already shown
+  const [locked, setLocked] = useState(false);
+  const box = useRef<SVGSVGElement>(null);
   const match = useRef<HTMLDivElement>(null);
   const shA = useRef<HTMLSpanElement>(null);
   const valA = useRef<HTMLSpanElement>(null);
+  const list = useRef<HTMLOListElement>(null);
   const busy = useRef(false);
+  const [opened, setOpened] = useState(false);
 
   const verified = newest ? e.sim.verifyStamp(e.groupSecret, newest.stamp) : false;
-  const rows = ama.stamps.slice(0, 5).reverse();
+  const rows = ama.stamps.slice(0, 5);
   const lastLoan = ama.stamps.find((s) => s.delta.loanIssued > 0n);
   const owed = Number(pb.loanOutstanding);
-  const holding = shownShares ?? Number(shown?.stamp.passbook.shares ?? pb.shares);
+  const holding = Number(shown?.stamp.passbook.shares ?? pb.shares);
+  const left = Math.max(0, CYCLE_MEETINGS - e.meetingsRecorded);
+  const pace = ama.stamps.length ? ama.stamps.reduce((a, s) => a + Number(s.delta.shares), 0) / ama.stamps.length : 0;
+  const projected = Math.round(Number(pb.shares) + pace * left) * SHARE_VALUE_GHS;
 
   const loanCell = (s: (typeof rows)[number]) => {
     const rep = Number(s.delta.loanRepaid), iss = Number(s.delta.loanIssued);
-    if (rep) return s.stamp.passbook.loanOutstanding === 0n ? `${rep}, cleared` : String(rep);
-    if (iss) return `new, ${iss}`;
+    if (rep) return s.stamp.passbook.loanOutstanding === 0n ? `${rep}, cleared` : `repaid ${rep}`;
+    if (iss) return `new loan ${iss}`;
     return '';
   };
 
   useEffect(() => {
-    if (!active || !fresh || busy.current) return;
+    if (!active || busy.current) return;
     busy.current = true;
     (async () => {
-      const s = sheet.current!;
-      const prts = [...s.querySelectorAll<HTMLElement>(`tr[data-m="${fresh.meeting}"] .prt`)];
-      await wait(250);
-      await printLine(prts);
+      await wait(200);
+      if (!opened) {
+        await lock(box.current, 1, 'open');
+        setOpened(true);
+      }
+      if (!fresh) {
+        busy.current = false;
+        return;
+      }
+      const row = list.current?.querySelector<HTMLElement>(`li[data-m="${fresh.meeting}"]`);
+      await rise(row ?? null, -30);
       const from = Number(shown?.stamp.passbook.shares ?? 0);
       const to = Number(fresh.stamp.passbook.shares);
       [shA.current, valA.current].forEach((el) => el && (el.dataset.counting = '1'));
-      await Promise.all([countTo(shA.current, from, to, 520), countTo(valA.current, from * SHARE_VALUE_GHS, to * SHARE_VALUE_GHS, 520)]);
+      await Promise.all([countTo(shA.current, from, to, 700), countTo(valA.current, from * SHARE_VALUE_GHS, to * SHARE_VALUE_GHS, 700)]);
       [shA.current, valA.current].forEach((el) => el && delete el.dataset.counting);
-      setShownShares(to);
-      await wait(200);
-      const h = s.querySelector(`tr[data-m="${fresh.meeting}"] .hold`);
-      if (h) {
-        const c = rel(h, s);
-        await draw(s, circlePath(c.x + c.w / 2 + 1, c.y + c.h / 2, c.w / 2 + 11, c.h / 2 + 6), { ms: 420 });
-      }
-      const k = s.querySelector('#loanstate');
-      if (k && fresh.stamp.passbook.loanOutstanding === 0n && fresh.delta.loanRepaid > 0n) {
-        const r = rel(k, s);
-        await draw(s, linePath(r.x - 2, r.y + r.h + 1, r.x + r.w + 6, 1), { ms: 260 });
-        draw(s, linePath(r.x + 3, r.y + r.h + 5, r.x + r.w + 2, 1), { ms: 220 });
-      }
-      await wait(160);
-      if (verified) await stampDown(match.current, tableRef.current);
+      anim(shA.current, [{ transform: 'scale(1)' }, { transform: 'scale(1.06)' }, { transform: 'scale(1)' }], { duration: 260 });
+      if (verified) await pop(match.current, 7);
       setPrinted(fresh.meeting);
-      setPrintedSet((xs) => [...xs, fresh.meeting]);
-      setShownShares(null);
       busy.current = false;
-      announce(`Entry ${fresh.meeting} printed. Ama holds ${to} shares, ${to * SHARE_VALUE_GHS} cedis. ${verified ? 'It matches the group seal.' : ''}`);
+      announce(`Entry ${fresh.meeting} added. Ama holds ${to} shares, ${to * SHARE_VALUE_GHS} cedis. ${verified ? 'It matches the group seal.' : ''}`);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, fresh?.meeting]);
 
   return (
-    <Leaf band={[<><b>Ama</b>’s phone</>, 'Opened with her PIN']} dog sheetRef={sheet}>
-      <p className="label">Savings passbook No. 0417</p>
-      <div className="head1">
-        <h2 className="disp" tabIndex={-1} style={{ fontSize: 64, marginTop: 4 }}>
-          Ama
-        </h2>
-        <div className="bal">
-          <span className="label">Shares held</span>
-          <span className="fig">
-            <Count value={holding} innerRef={shA} testId="ama-shares" />
-          </span>
-          <span className="sub">
-            GH<Ced />
-            <Count value={holding * SHARE_VALUE_GHS} innerRef={valA} testId="ama-value" />
-          </span>
-        </div>
+    <Screen who={<><b>Ama</b>’s phone</>} where="Opened with her PIN" action={<LockNow onLock={() => setLocked(true)} />}>
+      <h2 className="h1" tabIndex={-1}>
+        Ama’s book
+      </h2>
+      <div className="hero-row">
+        <span className="hero num" style={{ fontSize: 'var(--hero-xl)' }}>
+          <Figure value={fresh ? holding : Number(pb.shares)} innerRef={shA} testId="ama-shares" className="" />
+        </span>
+        <span className="hero unit">SHARES</span>
       </div>
-      <div style={{ position: 'relative' }}>
-        <table className="ledger pb ruled" ref={tableRef} data-testid="passbook">
-          <thead>
-            <tr>
-              <th scope="col">Mtg</th>
-              <th scope="col">Bought</th>
-              <th scope="col">Holding</th>
-              <th scope="col" className="r">
-                Loan repaid
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((s) => {
-              const isFresh = fresh?.meeting === s.meeting;
-              const printedHere = isFresh || printedSet.includes(s.meeting);
-              const cell = (v: string, cls = '') =>
-                printedHere ? (
-                  <span className="skew">
-                    <span className={`prt ${cls}`} style={isFresh ? { visibility: 'hidden' } : undefined}>
-                      {v}
-                    </span>
-                  </span>
-                ) : (
-                  <span className={cls}>{v}</span>
-                );
-              return (
-                <tr key={s.meeting} data-m={s.meeting} className={printedHere ? 'fresh' : ''}>
-                  <td className="mt">{cell(String(s.meeting))}</td>
-                  <td className="num">{cell(String(s.delta.shares))}</td>
-                  <td className="num">{cell(String(s.stamp.passbook.shares), 'hold')}</td>
-                  <td className="r">{cell(loanCell(s))}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        <Stamp ref={match} kind="match" ink="violet" text={`group seal ${newest?.meeting ?? ''}`} style={{ right: -2, top: 142 }} testId="match" />
-      </div>
-      <div className="facts">
-        <div>
-          <span className="label">Social fund to date</span>
-          <b className="num">
-            <Ghs n={Number(pb.socialFund)} />
-          </b>
-        </div>
-        <div>
-          <span className="label">{lastLoan ? <>Loan of <Ghs n={Number(lastLoan.delta.loanIssued)} /></> : 'Loans'}</span>
-          <b id="loanstate">{owed ? <><Ghs n={owed} /> owed</> : lastLoan ? 'Cleared' : 'None'}</b>
-        </div>
-      </div>
-      <p className="after" style={{ color: 'var(--ink-2)', maxWidth: '74%' }}>
-        Only this phone holds the key that reads this page.
+      <p className="hero-sub">
+        GH¢<Figure value={(fresh ? holding : Number(pb.shares)) * SHARE_VALUE_GHS} innerRef={valA} testId="ama-value" className="" /> saved.{' '}
+        {owed ? <>Loan owed: <Ghs n={owed} />.</> : lastLoan ? <>Her <Ghs n={Number(lastLoan.delta.loanIssued)} /> loan is paid off.</> : 'No loan.'}
       </p>
-      <div style={{ height: 14 }} />
-      <button className="btn" type="button" onClick={() => go(2)}>
-        See her husband’s phone
-      </button>
-    </Leaf>
+      <div className="boxstage">
+        <CashBox ref={box} locks={['shut', opened ? 'open' : 'shut', 'shut']} title="The group’s cash box. Ama holds the key to the middle padlock, and it is open." label="AMA HOLDS THE MIDDLE KEY" />
+        <Seal ref={match} top="MATCHES" mid={String(newest?.meeting ?? '')} sub="group seal" tone="cream" style={{ right: 4, top: -8, visibility: fresh || !newest ? 'hidden' : 'visible' }} testId="match" />
+      </div>
+      <section className="sheet" aria-label="Ama’s passbook">
+        <div className="card shareout">
+          <div>
+            <b>Share-out in {left} meetings</b>
+            <span>
+              At her pace she takes home about <Ghs n={projected} />.
+            </span>
+          </div>
+          <span className="hero num small">{left}</span>
+        </div>
+        <ol className="history" ref={list} data-testid="passbook" aria-label="Last five entries">
+          {rows.map((s) => (
+            <li key={s.meeting} data-m={s.meeting} className={fresh?.meeting === s.meeting || printed === s.meeting ? 'new' : ''} style={fresh?.meeting === s.meeting ? { opacity: 0 } : undefined}>
+              <span className="mt">Meeting {s.meeting}</span>
+              <span className="d num">+{String(s.delta.shares)}</span>
+              <span className="h num">holding {String(s.stamp.passbook.shares)}</span>
+              <span className="l">{loanCell(s)}</span>
+            </li>
+          ))}
+        </ol>
+        <div className="facts">
+          <div>
+            <span className="label">Social fund to date</span>
+            <b className="num">
+              <Ghs n={Number(pb.socialFund)} />
+            </b>
+          </div>
+          <div>
+            <span className="label">{lastLoan ? <>Loan of <Ghs n={Number(lastLoan.delta.loanIssued)} /></> : 'Loans'}</span>
+            <b id="loanstate">{owed ? <><Ghs n={owed} /> owed</> : lastLoan ? 'Cleared' : 'None'}</b>
+          </div>
+        </div>
+        <p className="note">Only this phone holds the key that reads this page.</p>
+        <div className="cta">
+          <button className="btn" type="button" onClick={() => go(2)}>
+            See her husband’s phone
+          </button>
+        </div>
+      </section>
+      {locked && (
+        <div className="cover" role="dialog" aria-label="Locked">
+          <CashBox title="The cash box, all three padlocks shut" label="LOCKED" />
+          <p>Locked. Anyone picking up this phone sees the group’s box, not her book.</p>
+          <button className="btn light" type="button" onClick={() => setLocked(false)} autoFocus>
+            Open with her PIN
+          </button>
+        </div>
+      )}
+    </Screen>
   );
 }
