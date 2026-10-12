@@ -50,6 +50,30 @@ import * as Rx from 'rxjs';
 import type { Logger } from 'pino';
 import { loadWalletState, registerStateSaver, stateSaverFor, walletStateId } from './wallet-state.js';
 
+/**
+ * Submit, retrying when the node's websocket drops mid-submission. Blockfrost's Preprod RPC
+ * closes its websockets from time to time ("1000 Normal Closure"); on 12 Oct 2026 one close
+ * killed a registration in flight. A retry of a transaction that did land fails with a
+ * duplicate or a spent input, which the caller sees as an error to check, never a double spend.
+ */
+export async function submitWithRetry(
+  facade: WalletFacade,
+  tx: FinalizedTransaction,
+  logger?: Pick<Logger, 'warn'>,
+  attempts = 3,
+): Promise<string> {
+  for (let i = 1; ; i++) {
+    try {
+      return await facade.submitTransaction(tx);
+    } catch (e) {
+      const msg = String((e as { cause?: unknown })?.cause ?? e) + String(e);
+      if (i >= attempts || !/disconnected|Normal Closure|socket|ECONNRESET/i.test(msg)) throw e;
+      logger?.warn(`Submission interrupted by a dropped connection (attempt ${i}); retrying in ${3 * i} s`);
+      await new Promise((r) => setTimeout(r, 3000 * i));
+    }
+  }
+}
+
 export type WalletSecret =
   | { kind: 'seed'; value: string }
   | { kind: 'mnemonic'; value: string };
@@ -98,7 +122,7 @@ export class MidnightWalletProvider implements MidnightProvider, WalletProvider 
   }
 
   submitTx(tx: FinalizedTransaction): Promise<string> {
-    return this.wallet.submitTransaction(tx);
+    return submitWithRetry(this.wallet, tx, this.logger);
   }
 
   /**
@@ -199,7 +223,7 @@ export class MidnightWalletProvider implements MidnightProvider, WalletProvider 
       (payload) => this.unshieldedKeystore.signData(payload),
     );
     const finalized = await this.wallet.finalizeRecipe(signed);
-    return await this.wallet.submitTransaction(finalized);
+    return await submitWithRetry(this.wallet, finalized, this.logger);
   }
 
   async start(): Promise<void> {

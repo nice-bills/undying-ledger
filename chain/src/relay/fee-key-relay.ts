@@ -35,7 +35,7 @@ import { fromHex, ttlOneHour } from '@midnight-ntwrk/midnight-js-utils';
 import { getConfig } from '../config.js';
 import { buildFeeKeyWallet } from '../fee-key-wallet.js';
 import { stateSaverFor } from '../wallet-state.js';
-import { syncWallet } from '../wallet.js';
+import { submitWithRetry, syncWallet } from '../wallet.js';
 
 const logger = makeLogger(process.env['LOG_LEVEL'] ?? 'info');
 const MAX_BODY_BYTES = 25 * 1024 * 1024;
@@ -96,7 +96,7 @@ async function sponsorAndSubmit(hex: string): Promise<string> {
   const finalized = await facade.finalizeRecipe(signed);
   // Several relays on one key can collide on the same DUST UTXO (DustDoubleSpend, error 196):
   // the loser should simply retry. See README "Honest limitations".
-  const txId = await facade.submitTransaction(finalized);
+  const txId = await submitWithRetry(facade, finalized, logger as never);
   void stateSaverFor(facade)?.().catch(() => undefined);
   return txId;
 }

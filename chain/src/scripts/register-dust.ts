@@ -23,7 +23,7 @@ import { nativeToken } from '@midnight-ntwrk/midnight-js-protocol/ledger';
 import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
 import { DustAddress, MidnightBech32m, UnshieldedAddress } from '@midnight-ntwrk/wallet-sdk/address-format';
 import { getConfig } from '../config.js';
-import { MidnightWalletProvider, syncWallet } from '../wallet.js';
+import { MidnightWalletProvider, submitWithRetry, syncWallet } from '../wallet.js';
 
 const logger = makeLogger();
 const cfg = getConfig();
@@ -57,7 +57,7 @@ async function register(w: MidnightWalletProvider, to?: DustAddress): Promise<st
   const ks = w.unshieldedKeystore;
   const recipe = await w.wallet.registerNightUtxosForDustGeneration(utxos, ks.getPublicKey(), (p) => ks.signData(p), to);
   const tx = await w.wallet.finalizeRecipe(recipe); // proves on the local proof server and binds
-  const id = await w.wallet.submitTransaction(tx);
+  const id = await submitWithRetry(w.wallet, tx, logger as never);
   logger.info(`Registration submitted: ${id}`);
   return id;
 }
