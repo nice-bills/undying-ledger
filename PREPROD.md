@@ -1,12 +1,30 @@
 # Running Undying Ledger on Midnight Preprod
 
 This is the path from a fresh clone to a deployed savings group on Preprod with **measured** fees
-and proof times in the UI. Expect one to two hours, most of it waiting for a wallet to sync.
+and proof times in the UI. Expect two to three hours, most of it a one-time wallet sync.
 
-> **What has and has not been run.** Everything in this file was written on a build machine with
-> no Docker, no Lace and no tNIGHT. `scripts/preprod.sh` passes `bash -n` and `shellcheck`, its
-> `check` step was run up to the Docker test, and `chain/` typechecks against Midnight.js 4.1.1.
-> **Nothing here has been run against Preprod.** Treat the first run as the test.
+> **What has and has not been run.** On 12 October 2026 the wallet-SDK path ran end to end on
+> Preprod from a cloud container: `register-dust self`, the deploy, `register-dust endow`, the
+> fee-key relay, and `measure --apply` in relay mode (hashes in the README). **The Lace path
+> (step 9, `payFees: false`) has not been run**; it is tested only with a mocked Lace.
+
+### The order that worked (12 Oct 2026, seeds instead of Lace)
+
+```bash
+# three throwaway 64-hex seeds plus the fee key's, mode 600, never printed or committed
+umask 077; for k in DEPLOYER NGO CALLER GROUP_FEE_KEY; do echo "${k}_SEED=$(openssl rand -hex 32)"; done > .preprod/wallets.env
+set -a; . .preprod/wallets.env; set +a; export MIDNIGHT_NETWORK=preprod
+npm run addresses -w chain                     # the deployer's unshielded address -> faucet tNIGHT
+npm run sync-wallets -w chain -- deployer &    # one process per wallet: the sync is CPU-bound
+npm run sync-wallets -w chain -- ngo &         # (about 1 h 45 min each from genesis, saved as it goes
+npm run sync-wallets -w chain -- caller &      #  to .preprod/wallet-state; a restore takes ~6.5 min)
+npm run sync-wallets -w chain -- feekey & wait
+npm run register-dust -w chain -- self         # the deployer's NIGHT now makes its own DUST
+GRACE_SECONDS=300 DEPLOY_OUT=$PWD/.preprod/group.json npm run deploy:preprod -w chain   # reuses GROUP_FEE_KEY_SEED
+npm run register-dust -w chain -- endow        # half the NIGHT to the NGO key, registered to the fee key
+GROUP_CONTRACT=... GROUP_FEE_KEY_SEED=... npm run relay -w chain &   # both from .preprod/group.json
+RELAY_URL=http://localhost:3001 scripts/preprod.sh measure --apply   # CALLER_SEED signs with 0 DUST
+```
 
 > **Preprod moved to Blockfrost on 9 October 2026.** Midnight shut down
 > `indexer.preprod.midnight.network` and `rpc.preprod.midnight.network` from 22:00 UTC that day
@@ -215,7 +233,9 @@ scripts/preprod.sh down
 |---|---|
 | `410 ENDPOINT_DECOMMISSIONED` or `fetch failed` for `*.preprod.midnight.network` | an old URL. Preprod is on Blockfrost now (see top). |
 | HTTP `403 Missing project token` / `Invalid project token` / `Network token mismatch` | `BLOCKFROST_PROJECT_ID` unset, mistyped, or a Mainnet token. Midnight.js only shows `Received status code 403`; `scripts/preprod.sh check` shows the indexer's own message. |
-| Wallet sync seems stuck | a first sync from genesis on Preprod takes over an hour. Saved sync state from the old Midnight-hosted indexer is not portable; discard it. |
+| Wallet sync seems stuck | a first sync from genesis on Preprod took about 1 h 45 min (1.65 million DUST events, one CPU core per wallet). Run `npm run sync-wallets -w chain` first, one process per wallet; progress is saved every 3 minutes. Saved state from the old Midnight-hosted indexer is not portable; discard it. |
+| `disconnected from wss://rpc.midnight-preprod.blockfrost.io ... 1000:: Normal Closure` during a submission | Blockfrost closes its websockets from time to time. `submitWithRetry` (chain/src/wallet.ts) retries up to three times. If a retry fails with `1010: Invalid Transaction: Custom error: 170`, an earlier attempt may or may not have landed: rerun the step, which checks the chain first (on 12 Oct the first transfer had not landed). |
+| A script sits for minutes after "Initializing wallet builder" | it is restoring a saved wallet (about 6.5 minutes of CPU for a 6 MB DUST state); not a hang. |
 | `Wallet sync timeout` right after a transaction | Blockfrost's idle subscription reports progress about every 4 to 5 minutes; wait longer. |
 | Proof server never becomes healthy | first start downloads parameters; `docker compose -f chain/compose.yml logs`. |
 | `DustDoubleSpend` (196) from the relay | two relays spent the same DUST UTXO; retry. Split the endowment across several NIGHT UTXOs. |

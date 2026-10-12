@@ -44,45 +44,35 @@ npm run test:e2e     # needs Chromium; E2E_CDP can attach to an existing browser
 
 Pinned versions (Preprod support matrix, 9 Oct 2026): Compact 0.31.1, compact-runtime 0.16.0, Midnight.js 4.1.1, DApp Connector API 4.0.1, Wallet SDK 1.2.0, proof server 8.1.0. Midnight retired its own Preprod indexer and RPC on 9 Oct 2026, so every Preprod call now goes through **Blockfrost** (`BLOCKFROST_PROJECT_ID`, starts with `nightpreprod`).
 
-## Status (12 Oct 2026, HEAD on main)
+## Status (12 Oct 2026, evening, HEAD on main)
 
-**Done and verified on the build machine**
-- The contract compiles; 50 unit tests pass; typecheck and the production build are clean.
-- e2e: 8 passed, 2 skipped (the agentic tests need a model key) at 390x844 and 430x932.
-- The live demo is up at https://nice-bills.github.io/undying-ledger/.
-- The repo is public, Apache-2.0, with the `midnightntwrk` topic.
-- Pitch deck: 14 slides, on Google Slides (owner has the link). The source is outside this repo; see the handoff zip.
-- Narrated walkthrough video and captions are in `media/`.
+**Ran on Midnight Preprod (12 Oct 2026, cloud session, wallet SDK from Node, no Lace)**
+- register-dust self `008d6278…ab357c7`; deploy `e95e3769…f3bef5`, contract `726bb6e0ce9d67ecc5c587a2f5f509ae39c26dbfd29d71c75f8d7de090ed7c61` (block 2,949,765, 300 s grace); endow transfer `00d7c29c…243b91` and NGO registration `008b8744…281bc6` to the fee key's DUST address.
+- Through the relay, a caller holding 0 DUST before and after: `recordMeeting` `abbb61e7…1becc5` (block 2,950,140) and `attestSavings` `c40214ef…06e320` (block 2,950,145). Fee 1 SPECK each (the key spent 1,001 with the SDK's 1,000 overhead). Proofs 3.9 s and 3.8 s. Full hashes in README, `ui/src/demo/preprod.ts` and `.preprod/` (gitignored).
+- `measure --apply` filled `ui/src/demo/measured.ts` and `preprod.ts`; `#/live` shows the run with explorer links (`preprod.midnightexplorer.com/transactions/<hash>`, `/contracts/<address>`) and no token.
 
-**Never run (the biggest gap)**
-- Anything on Preprod: deploy.ts, measure.ts, the fee-key relay, Lace with `payFees:false`, the relay accepting Lace's finalized transaction, `levelPrivateStateProvider` (IndexedDB) in a real browser, real proof times and fees.
-- The `#/live` write path has only been tested with a mocked Lace and mocked providers, plus the fake session. Say this plainly anywhere it comes up; never claim it works on-chain.
-- Running it needs Docker, a Blockfrost Preprod token, Lace on Preprod with a throwaway wallet, faucet tNIGHT, Generate tDUST, then `scripts/preprod.sh` and `measure --apply`, rebuild, and commit docs/. PREPROD.md has every step.
+**Still only tested with mocks**
+- Lace: `payFees:false`, Lace's finalized transaction into the relay, `levelPrivateStateProvider` in a real browser, browser Blockfrost CORS with a valid token. Needs Lace on Preprod with a throwaway wallet; the owner has to do this or drive it.
+- `sunset` and `heartbeat` on Preprod (the grace is 300 s on the deployed group, so a sunset call is cheap to add).
 
-**Written 12 Oct without a machine (not typechecked, not run; npm registry was unreachable)**
-- Relay logs the fee key's DUST address and returns it from `GET /health`; deploy writes it to `.preprod/group.json` as `groupFeeKeyDustAddress`. Uses `DustAddress.encodePublicKey` from wallet-sdk 1.2.0 and `DustSecretKey.publicKey`.
-- Relay refuses a call whose intents already carry DUST spends (`intent.dustActions.spends`), so a fee is never paid twice.
-- README: endowment paragraph at the top, Wave 3 roadmap. Deck spec (`make_spec.py`, project docs) reordered to lead with the endowment, with a Wave 3 slide and a `MEASURED` block to fill after Preprod.
-- Run `npm run typecheck && npm test` first on the laptop. If the relay commit breaks, revert it alone.
+**Done and verified in the cloud session**
+- 50 unit tests, typecheck, e2e 8 passed / 2 agentic skipped at 390 and 430 (e2e needs Node >= 22.22.3; the container has 22.22.0, so a Node 24 tarball was used).
+- UI rebuilt as the cash box (owner's choice); launch video `media/launch-wide.mp4` and `-tall.mp4` (50 s, `media/launch/make.sh`); demo.mp4 and the narrated cut re-recorded (84 s). Both videos were made BEFORE the measured fee: they show "1 DUST est." on the receipt. Re-render with `media/launch/make.sh` and `media/record-demo.mjs` (then re-time the narration as in the 12 Oct session).
+- Proving keys ship in `docs/zk/` so `#/live` can prove from Pages.
 
-**12 Oct, cloud session (no Lace)**
-- Verified: 895dadd typechecks and 50 tests pass. compactc 0.31.1 compiles the contract to the same committed output (keys regenerated). Proof server 8.1.0 healthy on :6300.
-- Written and typechecked, not yet run on Preprod: `chain/src/scripts/register-dust.ts` (`self`: deployer NIGHT to its own DUST; `endow`: deployer sends half its NIGHT to an NGO key, which registers it to `groupFeeKeyDustAddress`), `addresses.ts` (public addresses only), and `RELAY_URL`/`CALLER_SEED` relay mode in measure.ts.
-- Order on Preprod: seeds into `.preprod/wallets.env` (mode 600; DEPLOYER_SEED, NGO_SEED, CALLER_SEED, never printed) -> `npm run addresses -w chain` -> faucet to the deployer -> `register-dust self` -> `GRACE_SECONDS=300 scripts/preprod.sh deploy` -> `register-dust endow` -> relay -> `RELAY_URL=http://localhost:3001 scripts/preprod.sh measure --apply`.
-- Cloud container workarounds: start `dockerd` yourself; `compact update` fails behind the proxy, so download `https://github.com/midnightntwrk/compact/releases/download/compactc-v0.31.1/compactc_v0.31.1_x86_64-unknown-linux-musl.zip` and run its `compactc src/undying.compact ./src/managed/undying` from `contract/`; the proof server needs a compose override with `network_mode: host`, `ports: !reset []`, `/root/.ccr/ca-bundle.crt` mounted as `/etc/ssl/certs/ca-certificates.crt`, `SSL_CERT_FILE` and `HTTPS_PROXY` set, or it cannot fetch its parameters.
-
-**Ranked plan to win (rubric: Eng 40, QA 15, Product 15, UX 15, Comms 10, Biz 5)**
-1. Preprod deploy with contract address and tx hashes in the README.
-2. A recordMeeting paid by the group fee key, with the member at 0 DUST. Register tNIGHT to `groupFeeKeyDustAddress` first.
-3. If Lace rejects `payFees:false`: a burner key in the member app that the relay balances.
-4. Serve the proving keys from Pages so `#/live` can write from the public link (today they exist only under `npm run dev`).
-5. Re-record the video with one real on-chain write and the explorer view of that transaction.
+**Container notes (cloud)**
+- Start `dockerd`; compactc 0.31.1 from the release zip (a `compact` shim wraps it); Docker Hub rate-limits, so pull `mirror.gcr.io/midnightntwrk/proof-server:8.1.0` and tag it; the proof server needs the compose override (host network, CA bundle, proxy env).
+- Wallet sync from genesis ~1 h 45 min per wallet, CPU-bound: `npm run sync-wallets -w chain -- <wallet>`, one process each, with run_in_background (2 h cap); state saves to `.preprod/wallet-state` every 3 min; a restore costs ~6.5 min CPU.
+- Blockfrost closes websockets often; `submitWithRetry` handles it. testkit logs the token unless `chain/src/logger.ts` is imported (it is, in every script).
+- Never use `pkill -f <pattern>` in a tool command: it matches the tool's own shell.
 
 **Next steps, in order**
-1. Run Preprod (PREPROD.md). Fix whatever breaks in chain/ and the relay. Then run `measure --apply` so the UI shows real numbers instead of placeholders, rebuild docs/, and push.
-2. Once Preprod works, update the README "Not yet run" section, the deck slide on fees (slide 9 still says "~1 wk" and the fee label lacks "placeholder"), and the video if the live flow is shown.
-3. Optional: record a real Lace on-screen run for the video.
-4. The owner submits on AKINDO personally (Discord and Telegram IDs, an ETH address). **Do not submit, post publicly, or spend money without the owner's explicit yes.** The deadline is unclear (page says 17 Oct 2026, API says 19 Oct 2026 15:00 GMT), so aim for 17 Oct.
+1. Re-render the launch video and demo video so the receipt shows the measured 1 SPECK fee; add a shot of the explorer page for `abbb61e7…`.
+2. Optional, cheap: call `sunset` on the deployed group after its 300 s grace (Node, no Lace) and add the hash.
+3. Lace `payFees:false` run (owner): PREPROD.md step 9.
+4. Deck: the fee slide (still "~1 wk", no measured fee) gets the measured numbers; source is outside this repo.
+5. The owner rotates the Blockfrost token (it was printed once in a session log before the redaction fix).
+6. The owner submits on AKINDO personally. **Do not submit, post publicly, or spend money without the owner's explicit yes.** Aim for 17 Oct.
 
 ## Design rules (the owner's standing rules; do not drift)
 

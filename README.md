@@ -8,6 +8,21 @@ Undying Ledger is a private record book for village savings and loan association
 
 Built for the AKINDO Midnight Buildathon, Wave 2.
 
+## Ran on Midnight Preprod (12 October 2026)
+
+A member's call was paid by the **group fee key**: the wallet that signed `recordMeeting` and `attestSavings` held **0 DUST before and after**; the fee-key relay added the fee and submitted. Every hash below opens on the explorer.
+
+| Step | Transaction | Block |
+|---|---|---|
+| Deploy the group contract [`726bb6e0…ed7c61`](https://preprod.midnightexplorer.com/contracts/726bb6e0ce9d67ecc5c587a2f5f509ae39c26dbfd29d71c75f8d7de090ed7c61) | [`e95e3769…f3bef5`](https://preprod.midnightexplorer.com/transactions/e95e3769116b1868e16cd61cca434e00513c264a966383573466b77561f3bef5) | 2,949,765 |
+| `recordMeeting`, fee from the group fee key | [`abbb61e7…1becc5`](https://preprod.midnightexplorer.com/transactions/abbb61e7d1557627f3a2d655c46beee4999315817eeb517d5959db03e31becc5) | 2,950,140 |
+| `attestSavings` (“at least N shares”), fee from the group fee key | [`c40214ef…06e320`](https://preprod.midnightexplorer.com/transactions/c40214efed2fdd2869c789166b3dd575a5140fee9e09d55af7f720ec7406e320) | 2,950,145 |
+
+- **Fee:** 1 SPECK per call (10⁻¹⁵ DUST) as the indexer and the explorer report it. The fee key spent 1,001 SPECK per call: the fee plus the wallet SDK's fixed 1,000 SPECK overhead.
+- **Proofs:** 3.9 s (`recordMeeting`) and 3.8 s (`attestSavings`) on the local proof server 8.1.0; about 25 to 30 s from submit to final.
+- **The endowment:** the deployer sent 2,500 tNIGHT to an NGO key, which registered it to the group fee key's DUST address (`register-dust endow`); the key had DUST within minutes.
+- **What did not run:** the member side here was a Node wallet-SDK script, not Lace. Lace with `payFees: false` is still untested (see Known limits).
+
 ![The six beats of the demo: meeting 12, Ama's passbook, the husband's phone, sunset, meeting 13, the proof slip](media/strip.jpg)
 
 **Try it live:** https://nice-bills.github.io/undying-ledger/ (or serve `docs/` with any static server: `npx serve docs`). The demo runs the **real compiled Compact circuits** in your browser through `@midnight-ntwrk/compact-runtime`. It needs no wallet, no network and no tokens. **Launch video (50 s, sound optional):** [`media/launch-wide.mp4`](media/launch-wide.mp4) (1920x1080) and [`media/launch-tall.mp4`](media/launch-tall.mp4) (1080x1920), rendered from the real built app by `media/launch/make.sh`, with original music synthesized on a 120 BPM grid and sound effects taken from the app's own animation events. An 84-second recording of the built app is in [`media/demo.mp4`](media/demo.mp4); [`media/demo-narrated.mp4`](media/demo-narrated.mp4) is the same cut with a synthetic voice-over and English captions ([`media/demo.srt`](media/demo.srt)).
@@ -153,9 +168,10 @@ npm run compact               # -> contract/src/managed/undying (contract/, zkir
 | Suite | Count | What |
 |---|---|---|
 | `contract/src/test/undying.test.ts` | 20 | every circuit, every refusal, raw public state searched for amounts and secrets, two groups with different balances have identically shaped public state |
-| `ui/src/demo/__tests__/engine.test.ts` | 2 | the demo story end to end on the engine; a leaked key drains fees but not the book, rotation recovers |
+| `ui/src/demo/__tests__/engine.test.ts` | 2 | the demo story end to end on the engine; a leaked key drains fees (by overpaying) but not the book, rotation recovers |
 | `ui/src/lace/__tests__/live-session.test.ts` | 28 | the Lace write path with a mocked `window.midnight` (dApp connector 4.0.1) and mocked Midnight.js providers: connect, network and prover checks, join by address, record meeting through the fee-key relay (`payFees: false`) or with Lace paying, own passbook and stamps checked with the real `passbookCommitment`, proof, sunset, and every error message |
-| `e2e/tests/live.e2e.ts` | 1 per phone size | `#/live` loads from the static build and says there is no Lace wallet; no write controls without one |
+| `e2e/tests/live.e2e.ts` | 1 per phone size | `#/live` loads from the static build, shows the recorded Preprod run with no wallet or token, says there is no Lace wallet; no write controls without one |
+| Preprod, by hand (12 Oct 2026) | 6 transactions | `scripts/preprod.sh` and `chain/src/scripts/*`: register-dust, deploy, endow, relay, `measure --apply`; hashes in [Ran on Midnight Preprod](#ran-on-midnight-preprod-12-october-2026) |
 | `e2e/tests/demo-flow.e2e.ts` | 4 per phone size | the six-beat story in a real browser, the refusals, Terms/Privacy/fee key, no console errors; plus an agentic smoke test that runs only with a model key |
 
 ### Deploying the demo
@@ -164,7 +180,7 @@ npm run compact               # -> contract/src/managed/undying (contract/, zkir
 
 ### Preprod
 
-See **[PREPROD.md](PREPROD.md)** and `scripts/preprod.sh`: Docker proof server, Lace and the faucet, DUST registration, deploy, connecting the UI, and measuring the real fee and proof times so the UI can drop its 1 DUST placeholder. Preprod’s indexer and RPC moved to Blockfrost on 9 October 2026 and now need a project token.
+See **[PREPROD.md](PREPROD.md)** and `scripts/preprod.sh`: Docker proof server, Lace and the faucet, DUST registration, deploy, connecting the UI, and measuring the real fee and proof times (`measure --apply` writes them into the UI; done on 12 Oct 2026). Preprod’s indexer and RPC moved to Blockfrost on 9 October 2026 and now need a project token.
 
 ## Roadmap (Wave 3)
 
@@ -176,16 +192,15 @@ See **[PREPROD.md](PREPROD.md)** and `scripts/preprod.sh`: Docker proof server, 
 
 ## Known limits
 
-- **Not yet run on Preprod.** `chain/` (deploy, measure, Lace providers, fee-key relay) and the live page, including its write path, are **typechecked but have never been executed against a network**. The build machine had no Docker, no Lace and no tNIGHT. The browser write path is covered by unit tests with a mocked Lace and mocked providers, which prove the wiring and the error paths, not that Lace, the proof server, the indexer or the relay behave like the mocks. Open questions:
+- **What ran on Preprod, and what has only been tested with mocks.** On Preprod (12 Oct 2026, see the table at the top): DUST registration, the deploy, the NGO endowment, the fee-key relay, and `recordMeeting` and `attestSavings` signed by a 0-DUST caller and paid by the relay, all from Node with the wallet SDK. **Not run on a network:** the browser write path on `#/live` (Lace connect, `payFees: false`, Lace's transaction into the relay, browser private state). It is covered by unit tests with a mocked Lace and mocked providers, which prove the wiring and the error paths, not that Lace behaves like the mock. Open questions:
   - Does Lace honour `balanceUnsealedTransaction(tx, { payFees: false })`? The API type has it; wallet behaviour is unconfirmed. If Lace refuses, the page says “Lace would not balance this call without paying the fee itself (payFees: false)” and offers to let Lace pay from the member’s own DUST. If Lace accepts but still adds its own fee, the relay now refuses the call rather than add a second fee (written, not yet run).
   - Will the relay accept what Lace returns? `balanceUnsealedTransaction` gives back a finalized transaction and the relay re-balances it with `balanceFinalizedTransaction` for DUST only. That pairing has not been exercised.
   - Does `levelPrivateStateProvider` (IndexedDB through `browser-level`) work in the Vite build in a real browser? It is bundled and typechecked; it was never opened in a browser here.
-  - Does a DUST wallet started from a bare secret key sync fast enough? A first Preprod sync from genesis takes over an hour.
-  - No real proof has been generated. The k values are from `zkir mock-compile`, not timed proofs.
+  - Answered on Preprod: a fresh wallet syncs about 1.65 million DUST events from genesis in roughly 1 h 45 min (CPU-bound, one core), so `chain/src/wallet-state.ts` saves and restores synced state (a restore takes about 6.5 min) and `npm run sync-wallets -w chain` syncs the wallets ahead of time. Real proofs took 3.8 to 3.9 s.
   - Can a browser call Blockfrost directly with a pasted token (CORS)? Untested with a valid token.
-- **The fee has not been measured.** The demo charges a **1 DUST placeholder** per transaction and says so on screen. Cap (5 DUST per NIGHT) and refill (about a week) follow the published parameters. The pitch line “a one-off ~US$0.50 to 4.50 per group against VSLA.online’s US$10/month” depends on two numbers still to measure: the DUST fee per call and the NIGHT price. `scripts/preprod.sh measure --apply` replaces the placeholder.
+- **The fee is measured on Preprod, not Mainnet.** On Preprod a call costs 1 SPECK (the key spends 1,001 SPECK with the SDK overhead). At that rate the 5 DUST cap of a single NIGHT would cover about five trillion calls, so the endowment's real cost is the NIGHT the NGO locks, not the fees. Mainnet fee parameters may differ; the pitch line against VSLA.online's US$10 a month should be re-checked there. Cap (5 DUST per NIGHT) and refill (about a week) follow the published parameters.
 - **The six beats drive the simulator; Preprod writes live on `#/live`.** The live page joins a deployed group by address with the member’s secrets (from `.preprod/group.json`; in a real group they arrive by QR) and calls the real circuits through `chain/src/api.ts`: `recordMeeting` (secretary), `attestSavings` (member), `sunset` (anyone). A member’s passbook stays in browser private state, encrypted with a passphrase; after each meeting the secretary hands out one-line stamps, which the member’s phone checks against the sealed commitment before keeping. The beats themselves are not wired to Preprod, and the private state written by the Node deploy script does not carry over to the browser, so a secretary who wants to record on an older group must import the stamps first.
-- **Fee-drain risk.** Anyone holding the group key can spend its DUST on junk transactions as fast as it regenerates. That is a denial of service, not a theft. Mitigations: one key per group kept inside the members’ app, a relay that sponsors only this group’s circuits, an endowment split across several NIGHT UTXOs (relays sharing a key can hit `DustDoubleSpend`, error 196, and must retry), and early rotation (a new key starts at zero DUST).
+- **Fee-drain risk.** Anyone holding the group key can spend its DUST on junk transactions. At 1 SPECK a call, draining by count is impractical, but a junk transaction can overpay its fee, so a copied key can still empty the balance. That is a denial of service, not a theft. Mitigations: one key per group kept inside the members’ app, a relay that sponsors only this group’s circuits, an endowment split across several NIGHT UTXOs (relays sharing a key can hit `DustDoubleSpend`, error 196, and must retry), and early rotation (a new key starts at zero DUST).
 - **The guarantee is social, not locked.** The NGO can revoke its DUST registration at any time, and the protocol reserves the right to change DUST rules.
 - **No contract upgrade path at sunset.** Handing maintenance authority to the group at sunset is future work.
 - **Time, not blocks.** The heartbeat window is in seconds of block time (90 s in the demo, 7 days by default on deploy).
