@@ -13,6 +13,8 @@ import { ledger, Phase } from '@undying-ledger/contract';
 import type { InitialAPI } from '@midnight-ntwrk/dapp-connector-api';
 import { Leaf } from '../a2/paper';
 import type { LiveSession } from './live-session';
+import { PreprodRecord } from './PreprodRecord';
+import { PREPROD_RUN } from '../demo/preprod';
 
 const LiveWrite = lazy(() => import('./LiveWrite'));
 const LOOKING = 'Looking for the Lace wallet…';
@@ -54,7 +56,7 @@ function findLace(): InitialAPI | undefined {
 }
 
 export default function LivePage() {
-  const [address, setAddress] = useState(() => params().get('contract') ?? '');
+  const [address, setAddress] = useState(() => params().get('contract') ?? PREPROD_RUN?.contract ?? '');
   const [token, setToken] = useState('');
   const [reg, setReg] = useState<Register | null>(null);
   const [status, setStatus] = useState<'idle' | 'reading' | 'error'>('idle');
@@ -164,6 +166,7 @@ export default function LivePage() {
           The public register
         </h2>
         <p className="lede">What anyone can read about a deployed group, no wallet needed. With Lace, members act on it.</p>
+        <PreprodRecord />
         <div className="prose">
           <label className="label" htmlFor="addr">
             Contract address

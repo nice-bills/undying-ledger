@@ -15,6 +15,7 @@ import { ProveBeat } from './beats/ProveBeat';
 import { FeeKeyPage } from './pages/FeeKeyPage';
 import { LegalPage } from './pages/LegalPage';
 import type { BeatProps } from './beats/types';
+import { PREPROD_RUN } from './demo/preprod';
 
 // Preprod live mode ships Midnight.js; load it only when someone opens #/live.
 const LivePage = lazy(() => import('./lace/LivePage'));
@@ -169,7 +170,15 @@ export default function App() {
             ))}
           </ol>
           <div className="foot">
-            <span>Simulator: real circuits, no wallet</span>
+            <span>
+              Simulator: real circuits, no wallet
+              {PREPROD_RUN && (
+                <>
+                  {'. '}
+                  <a href="#/live">Ran on Preprod</a>
+                </>
+              )}
+            </span>
             <span className="legal">
               <a href="#/fee-key">Fee key</a>
               <a href="#/terms">Terms</a>

@@ -7,7 +7,8 @@ import react from '@vitejs/plugin-react';
 import wasm from 'vite-plugin-wasm';
 
 // `npm run dev` only: serve the proving keys and ZKIR from `compact compile` at /zk/, where the
-// live page's FetchZkConfigProvider looks by default. They are large and never go into docs/.
+// live page's FetchZkConfigProvider looks by default. `npm run build` copies them to docs/zk/
+// (scripts/copy-zk.mjs) so the public Pages link can prove too.
 const ZK_DIR = resolve(__dirname, '../contract/src/managed/undying');
 const serveZk = (): Plugin => ({
   name: 'undying-serve-zk',

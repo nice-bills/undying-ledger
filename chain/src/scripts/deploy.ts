@@ -74,6 +74,9 @@ logger.info({ contract: api.address }, 'Deployed');
 // Printed ONCE for the demo. In a real group these go into each phone by QR, never to a server.
 const secrets = JSON.stringify({
   contract: api.address,
+  deployTxHash: api.deployed.deployTxData.public.txHash,
+  deployTxId: api.deployed.deployTxData.public.txId,
+  deployedAt: new Date().toISOString(),
   groupSecret: toHex(groupSecret),
   secretarySecret: toHex(secretarySecret),
   maintainerSecret: toHex(maintainerSecret),

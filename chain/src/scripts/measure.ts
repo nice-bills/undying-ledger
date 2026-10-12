@@ -17,6 +17,7 @@
 // indexer's RegularTransaction.fee (SPECK; 1 DUST = 10^15 SPECK), not from a balance difference,
 // because DUST keeps generating while a proof runs.
 
+import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { makeLogger } from '../logger.js';
 import { indexerPublicDataProvider } from '@midnight-ntwrk/midnight-js-indexer-public-data-provider';
@@ -151,6 +152,8 @@ const result = {
   attestSavings: { txHash: att.public.txHash, txId: att.public.txId, feeSpeck: attFee.toString(), feeDust: dust(attFee), proofSeconds: secs(attProof), submitToFinalSeconds: secs(attWall) },
 };
 console.log(JSON.stringify(result, null, 2));
+// MEASURE_OUT=<file>: the same public result as JSON (no secrets), for ui/scripts/set-preprod.mjs.
+if (process.env['MEASURE_OUT']) writeFileSync(process.env['MEASURE_OUT'], JSON.stringify({ ...result, measuredAt: new Date().toISOString() }, null, 2) + '\n');
 const feeForUi = Number(recFee) / Number(SPECK_PER_DUST);
 console.log(
   `\nPaste into the UI:\n  node ui/scripts/set-measured.mjs --fee ${feeForUi} --record ${result.recordMeeting.proofSeconds} --attest ${result.attestSavings.proofSeconds} --date "${new Date().toISOString().slice(0, 10)}, Preprod, proof-server 8.1.0"\n`,

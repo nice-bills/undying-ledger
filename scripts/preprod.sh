@@ -122,7 +122,7 @@ measure() {
     SECRETARY_SECRET="$(node -p "require('$g').secretarySecret")" \
     GROUP_SECRET="$(node -p "require('$g').groupSecret")" \
     MEMBER0_SECRET="$(node -p "require('$g').memberSecrets[0]")" \
-    MIDNIGHT_NETWORK=preprod MIDNIGHT_PROOF_SERVER="$PROOF_SERVER" \
+    MEASURE_OUT="$STATE/measure.json" MIDNIGHT_NETWORK=preprod MIDNIGHT_PROOF_SERVER="$PROOF_SERVER" \
       npm run measure:preprod -w chain
   ) | tee "$out"
   local cmd
@@ -130,7 +130,7 @@ measure() {
   [ -n "$cmd" ] || die "no measurement line in $out"
   if [ "${1:-}" = "--apply" ]; then
     say "Writing the measurements into ui/src/demo/measured.ts and rebuilding docs/"
-    (cd "$ROOT" && eval "$cmd" && npm run build)
+    (cd "$ROOT" && eval "$cmd" && node ui/scripts/set-preprod.mjs "$GROUP_JSON" "$STATE/measure.json" && npm run build)
   else
     echo
     echo "To show these numbers in the UI instead of the 1 DUST placeholder, run from $ROOT:"
