@@ -12,3 +12,4 @@ contract/src/managed/undying/keys/
 media/raw.webm
 media/vid/
 .preprod/
+media/launch/stage/*.woff2

@@ -1,0 +1,109 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Undying Ledger launch</title>
+<style>
+@font-face{font-family:Arch;src:url(archivo-62-125-latin.woff2) format("woff2");font-weight:100 900;font-stretch:62% 125%}
+@font-face{font-family:UI;src:url(schibsted-grotesk-normal-400-800-latin.woff2) format("woff2");font-weight:400 800}
+:root{--bg:#F3EEE4;--ink:#10261E;--ink2:#56645E;--em:#0E5A43;--saf:#F4B23A;--card:#FFF9EE}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--ink);font-family:UI,sans-serif;transition:background-color .8s cubic-bezier(.65,0,.35,1),color .8s}
+body.dark{--bg:#0A0F0D;--ink:#F3EEE4;--ink2:#9DAEA6;--em:#F4B23A}
+.cap{position:absolute;transition:opacity .45s cubic-bezier(.65,0,.35,1),transform .45s cubic-bezier(.65,0,.35,1)}
+.cap.out{opacity:0;transform:translateY(18px)}
+.eyebrow{font:800 22px/1 UI;letter-spacing:.16em;color:var(--em);text-transform:uppercase}
+.h{margin-top:22px;line-height:.92}
+.h .l{display:block;font:300 92px/.98 Arch;font-stretch:80%;letter-spacing:-.01em}
+.h .b{display:block;font:850 116px/.9 Arch;font-stretch:62%;letter-spacing:-.02em}
+.s{margin-top:28px;font:500 28px/1.38 UI;color:var(--ink2);max-width:540px}
+.s b{color:var(--ink);font-weight:800}
+.prog{position:absolute;display:flex;gap:14px;font:850 24px/1 Arch;font-stretch:62%;color:var(--ink2);transition:opacity .5s}
+.prog i{font-style:normal;width:56px;height:40px;border-radius:20px;display:grid;place-items:center;border:2px solid currentColor;opacity:.45;transition:all .4s}
+.prog i.on{opacity:1;background:var(--em);border-color:var(--em);color:var(--bg)}
+.prog i.done{opacity:.85}
+.cam{position:absolute;transform-origin:50% 50%;transition:transform 1s cubic-bezier(.65,0,.35,1)}
+.device{position:relative;width:426px;height:880px;border-radius:66px;background:#121614;padding:18px}
+.device iframe{width:390px;height:844px;border:0;border-radius:50px;display:block;background:#0E5A43}
+.call{position:absolute;inset:0;z-index:20;pointer-events:none;opacity:0;transition:opacity .25s}
+.call.on{opacity:1}
+.call .dot{position:absolute;width:24px;height:24px;margin:-12px 0 0 -12px;border-radius:50%;border:4px solid var(--saf);background:rgba(16,38,30,.0)}
+.call .ln{position:absolute;height:3px;background:var(--saf);transform-origin:0 50%}
+.call .lab{position:absolute;white-space:nowrap;background:#10261E;color:#FFF3DA;font:700 24px/1 UI;padding:14px 20px;border-radius:24px}
+.end-url{position:absolute;font:700 24px/1 UI;color:var(--ink2);letter-spacing:.02em}
+/* wide 1920x1080: caption left, device right */
+.wide .cap{left:150px;top:250px;width:780px}
+.wide .prog{left:150px;bottom:110px}
+.wide .cam{left:1150px;top:100px}
+.wide .end-url{left:150px;bottom:116px}
+/* tall 1080x1920: caption on top, larger device below */
+.tall .cap{left:90px;top:120px;width:900px}
+.tall .h .l{font-size:84px}.tall .h .b{font-size:116px}
+.tall .s{font-size:30px;max-width:880px}
+.tall .prog{left:90px;bottom:70px}
+.tall .cam{left:330px;top:760px;transform:scale(1.18);transform-origin:50% 0}
+.tall .end-url{left:90px;bottom:76px}
+</style></head>
+<body>
+<div class="cap" id="cap"><div class="eyebrow" id="eb"></div><div class="h"><span class="l" id="hl"></span><span class="b" id="hb"></span></div><p class="s" id="s"></p></div>
+<div class="prog" id="prog"><i>01</i><i>02</i><i>03</i><i>04</i><i>05</i><i>06</i></div>
+<div class="end-url" id="url" style="opacity:0">nice-bills.github.io/undying-ledger</div>
+<div class="cam" id="cam"><div class="device"><iframe id="app" title="Undying Ledger" src="/?fast"></iframe></div></div>
+<div class="call" id="call"><i class="dot"></i><i class="ln"></i><span class="lab"></span></div>
+<script>
+const $ = (id) => document.getElementById(id);
+document.body.className = new URLSearchParams(location.search).get('layout') === 'tall' ? 'tall' : 'wide';
+const TALL = document.body.className === 'tall';
+const BASE = TALL ? 1.18 : 1;
+window.stage = {
+  async cap(eb, l, b, s, step) {
+    const c = $('cap'); c.classList.add('out'); await new Promise((r) => setTimeout(r, 300));
+    $('eb').textContent = eb; $('hl').textContent = l; $('hb').textContent = b; $('s').innerHTML = s;
+    [...$('prog').children].forEach((x, i) => { x.classList.toggle('on', i + 1 === step); x.classList.toggle('done', i + 1 < step); });
+    $('prog').style.opacity = step ? '1' : '0';
+    c.classList.remove('out');
+  },
+  dark(on) { document.body.classList.toggle('dark', on); },
+  url(on) { $('url').style.opacity = on ? '1' : '0'; },
+  /** zoom the camera on an element inside the app, up to 1.5x, keeping it in frame */
+  zoom(sel, k = 1.3) {
+    const cam = $('cam');
+    if (!sel) { cam.style.transform = TALL ? 'scale(1.18)' : 'none'; return; }
+    const el = $('app').contentDocument.querySelector(sel); if (!el) return;
+    const r = el.getBoundingClientRect(); const dev = 18; // bezel
+    // aim at the element but clamp, so the device never leaves the frame
+    const cx = Math.min(276, Math.max(150, dev + r.left + r.width / 2)), cy = Math.min(600, Math.max(300, dev + r.top + r.height / 2));
+    const W = 426, H = 880; const s = BASE * k;
+    const tx = (W / 2 - cx) * s;
+    let ty = (H / 2 - cy) * s;
+    // vertical cut: the device top may not rise into the caption block (device top sits at 760)
+    if (TALL) ty = Math.max(ty, 540 - (760 + (H / 2) * (1 - s)));
+    cam.style.transformOrigin = '50% 50%';
+    cam.style.transform = `translate(${tx}px,${ty}px) scale(${s})`;
+  },
+  /** dot on the exact element, a short line, a label; never while the camera moves */
+  callout(sel, text, side = 'left') {
+    const el = $('app').contentDocument.querySelector(sel); const ifr = $('app');
+    if (!el) return;
+    const fr = ifr.getBoundingClientRect(); const k = fr.width / ifr.offsetWidth;
+    const r = el.getBoundingClientRect();
+    const x = fr.left + (r.left + r.width / 2) * k, y = fr.top + (r.top + r.height / 2) * k;
+    const c = $('call'); const dot = c.querySelector('.dot'), ln = c.querySelector('.ln'), lab = c.querySelector('.lab');
+    lab.textContent = text;
+    dot.style.left = x + 'px'; dot.style.top = y + 'px';
+    // the label sits just outside the device edge, joined to the dot by a thin line
+    const dx = side === 'left' ? fr.left - 28 - x : fr.right + 28 - x;
+    ln.style.left = x + 'px'; ln.style.top = y - 1.5 + 'px'; ln.style.width = Math.abs(dx) - 14 + 'px'; ln.style.transform = side === 'left' ? 'rotate(180deg)' : 'none';
+    lab.style.top = y - 26 + 'px';
+    if (side === 'left') { lab.style.left = 'auto'; lab.style.right = innerWidth - (x + dx) + 'px'; } else { lab.style.right = 'auto'; lab.style.left = x + dx + 'px'; }
+    if (TALL) {
+      // vertical cut: the label sits above the dot, centred on it and kept inside the frame
+      lab.style.right = 'auto';
+      const w = lab.offsetWidth || text.length * 13 + 40;
+      lab.style.left = Math.min(innerWidth - 40 - w, Math.max(40, x - w / 2)) + 'px';
+      lab.style.top = y - 118 + 'px';
+      ln.style.left = x - 1.5 + 'px'; ln.style.top = y - 66 + 'px'; ln.style.width = '54px';
+      ln.style.transform = 'rotate(90deg)'; ln.style.transformOrigin = '0 50%';
+    }
+    c.classList.add('on');
+  },
+  uncall() { $('call').classList.remove('on'); },
+};
+</script></body></html>

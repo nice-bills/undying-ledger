@@ -10,7 +10,7 @@ Built for the AKINDO Midnight Buildathon, Wave 2.
 
 ![The six beats of the demo: meeting 12, Ama's passbook, the husband's phone, sunset, meeting 13, the proof slip](media/strip.jpg)
 
-**Try it live:** https://nice-bills.github.io/undying-ledger/ (or serve `docs/` with any static server: `npx serve docs`). The demo runs the **real compiled Compact circuits** in your browser through `@midnight-ntwrk/compact-runtime`. It needs no wallet, no network and no tokens. An 84-second recording of the built app is in [`media/demo.mp4`](media/demo.mp4); [`media/demo-narrated.mp4`](media/demo-narrated.mp4) is the same cut with a synthetic voice-over and English captions ([`media/demo.srt`](media/demo.srt)).
+**Try it live:** https://nice-bills.github.io/undying-ledger/ (or serve `docs/` with any static server: `npx serve docs`). The demo runs the **real compiled Compact circuits** in your browser through `@midnight-ntwrk/compact-runtime`. It needs no wallet, no network and no tokens. **Launch video (50 s, sound optional):** [`media/launch-wide.mp4`](media/launch-wide.mp4) (1920x1080) and [`media/launch-tall.mp4`](media/launch-tall.mp4) (1080x1920), rendered from the real built app by `media/launch/make.sh`, with original music synthesized on a 120 BPM grid and sound effects taken from the app's own animation events. An 84-second recording of the built app is in [`media/demo.mp4`](media/demo.mp4); [`media/demo-narrated.mp4`](media/demo-narrated.mp4) is the same cut with a synthetic voice-over and English captions ([`media/demo.srt`](media/demo.srt)).
 
 ---
 
