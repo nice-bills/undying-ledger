@@ -24,9 +24,6 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { makeLogger } from '../logger.js';
 import {
   ContractCall,
-  DustSecretKey,
-  LedgerParameters,
-  ZswapSecretKeys,
   Transaction,
   type Binding,
   type FinalizedTransaction,
@@ -35,20 +32,9 @@ import {
 } from '@midnight-ntwrk/midnight-js-protocol/ledger';
 import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
 import { fromHex, ttlOneHour } from '@midnight-ntwrk/midnight-js-utils';
-import {
-  DustAddress,
-  DustWallet,
-  InMemoryTransactionHistoryStorage,
-  PublicKey,
-  ShieldedWallet,
-  UnshieldedWallet,
-  WalletEntrySchema,
-  WalletFacade,
-  createKeystore,
-  generateRandomSeed,
-  mergeWalletEntries,
-} from '@midnight-ntwrk/wallet-sdk';
 import { getConfig } from '../config.js';
+import { buildFeeKeyWallet } from '../fee-key-wallet.js';
+import { stateSaverFor } from '../wallet-state.js';
 import { syncWallet } from '../wallet.js';
 
 const logger = makeLogger(process.env['LOG_LEVEL'] ?? 'info');
@@ -67,32 +53,14 @@ const port = Number(process.env['RELAY_PORT'] ?? 3001);
 const cfg = getConfig();
 setNetworkId(cfg.networkId);
 
-// --- wallet: DUST from the group fee key, everything else throwaway -----------------
-const walletConfig = {
-  indexerClientConnection: { indexerHttpUrl: cfg.indexer, indexerWsUrl: cfg.indexerWS },
-  provingServerUrl: new URL(cfg.proofServer),
-  networkId: cfg.networkId,
-  relayURL: new URL(cfg.nodeWS),
-  txHistoryStorage: new InMemoryTransactionHistoryStorage(WalletEntrySchema, mergeWalletEntries),
-  costParameters: { ledgerParams: LedgerParameters.initialParameters(), additionalFeeOverhead: 1_000n, feeBlocksMargin: 5 },
-};
-const throwaway = generateRandomSeed();
-const throwawayShielded = ZswapSecretKeys.fromSeed(throwaway);
-const groupDustKey = DustSecretKey.fromSeed(feeKeySeed);
+// --- wallet: DUST from the group fee key, everything else holds nothing (fee-key-wallet.ts) ---
+const { facade, shieldedKeys: throwawayShielded, dustKey: groupDustKey, keystore, dustAddress: feeKeyDustAddress, restoredFrom } =
+  await buildFeeKeyWallet(cfg, feeKeySeed);
 // The address the NGO (or a relative) registers or designates NIGHT to, so the key earns DUST.
 // Printed before the long first sync so it can be funded while the wallet catches up.
-const feeKeyDustAddress = DustAddress.encodePublicKey(cfg.networkId, groupDustKey.publicKey);
 logger.info(`Group fee key DUST address (register or designate NIGHT here): ${feeKeyDustAddress}`);
-const keystore = createKeystore(throwaway, cfg.networkId as never);
-
-const facade = await WalletFacade.init({
-  configuration: walletConfig as never,
-  shielded: (c) => ShieldedWallet(c).startWithSeed(throwaway),
-  unshielded: (c) => UnshieldedWallet(c).startWithPublicKey(PublicKey.fromKeyStore(keystore)),
-  dust: (c) => DustWallet(c).startWithSecretKey(groupDustKey, LedgerParameters.initialParameters().dust),
-});
-await facade.start(throwawayShielded, groupDustKey);
-await syncWallet(logger as never, facade, 600_000); // a fresh key syncs from genesis; can take a long time
+if (restoredFrom) logger.info(`Fee key wallet restored from state saved ${restoredFrom}`);
+await syncWallet(logger as never, facade, 600_000); // a fresh key syncs from genesis; can take hours on Preprod
 
 const dustBalance = async (): Promise<bigint> => (await facade.waitForSyncedState()).dust.balance(new Date());
 logger.info(`Group fee key ready. DUST balance: ${await dustBalance()} SPECK`);
@@ -128,7 +96,9 @@ async function sponsorAndSubmit(hex: string): Promise<string> {
   const finalized = await facade.finalizeRecipe(signed);
   // Several relays on one key can collide on the same DUST UTXO (DustDoubleSpend, error 196):
   // the loser should simply retry. See README "Honest limitations".
-  return facade.submitTransaction(finalized);
+  const txId = await facade.submitTransaction(finalized);
+  void stateSaverFor(facade)?.().catch(() => undefined);
+  return txId;
 }
 
 // --- transport (from example-private-party sponsor-service.ts) -----------------------
@@ -185,3 +155,9 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
 createServer((req, res) => {
   handle(req, res).catch((e: unknown) => send(res, 500, { success: false, error: String(e) }));
 }).listen(port, () => logger.info(`Group fee-key relay on http://localhost:${port} for contract ${groupContract}`));
+
+for (const sig of ['SIGINT', 'SIGTERM'] as const) {
+  process.once(sig, () => {
+    void (stateSaverFor(facade)?.() ?? Promise.resolve()).finally(() => process.exit(0));
+  });
+}

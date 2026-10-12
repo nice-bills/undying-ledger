@@ -29,11 +29,17 @@ import {
   type WalletProvider,
 } from '@midnight-ntwrk/midnight-js-types';
 import { ttlOneHour } from '@midnight-ntwrk/midnight-js-utils';
-import type {
+import {
+  DustWallet,
+  InMemoryTransactionHistoryStorage,
+  ShieldedWallet,
+  UnshieldedWallet,
+  WalletEntrySchema,
   WalletFacade,
-  FacadeState,
-  UnshieldedAddress,
-  UnshieldedKeystore,
+  mergeWalletEntries,
+  type FacadeState,
+  type UnshieldedAddress,
+  type UnshieldedKeystore,
 } from '@midnight-ntwrk/wallet-sdk';
 import {
   type DustWalletOptions,
@@ -42,6 +48,7 @@ import {
 } from '@midnight-ntwrk/testkit-js';
 import * as Rx from 'rxjs';
 import type { Logger } from 'pino';
+import { loadWalletState, registerStateSaver, stateSaverFor, walletStateId } from './wallet-state.js';
 
 export type WalletSecret =
   | { kind: 'seed'; value: string }
@@ -201,6 +208,7 @@ export class MidnightWalletProvider implements MidnightProvider, WalletProvider 
   }
 
   async stop(): Promise<void> {
+    await stateSaverFor(this.wallet)?.().catch((e: unknown) => this.logger.warn(`Could not save wallet state: ${String(e)}`));
     return this.wallet.stop();
   }
 
@@ -223,7 +231,7 @@ export class MidnightWalletProvider implements MidnightProvider, WalletProvider 
         : base.withSeed(secret.value);
 
     const buildResult = await builder.buildWithoutStarting();
-    const { wallet, seeds, keystore } = buildResult as {
+    const { wallet: fresh, seeds, keystore } = buildResult as {
       wallet: WalletFacade;
       seeds: {
         masterSeed: string;
@@ -233,6 +241,34 @@ export class MidnightWalletProvider implements MidnightProvider, WalletProvider 
       };
       keystore: UnshieldedKeystore;
     };
+
+    // Resume from a saved sync if there is one (wallet-state.ts); otherwise start from genesis.
+    const stateId = walletStateId(env.walletNetworkId, seeds.masterSeed);
+    const saved = loadWalletState(stateId);
+    let wallet = fresh;
+    if (saved) {
+      const configuration = {
+        indexerClientConnection: { indexerHttpUrl: env.indexer, indexerWsUrl: env.indexerWS },
+        provingServerUrl: new URL(env.proofServer),
+        networkId: env.walletNetworkId,
+        relayURL: new URL(env.nodeWS),
+        txHistoryStorage: new InMemoryTransactionHistoryStorage(WalletEntrySchema, mergeWalletEntries),
+        costParameters: dustOptions,
+      };
+      try {
+        wallet = await WalletFacade.init({
+          configuration: configuration as never,
+          shielded: (c) => ShieldedWallet(c).restore(saved.shielded),
+          unshielded: (c) => UnshieldedWallet(c).restore(saved.unshielded),
+          dust: (c) => DustWallet(c).restore(saved.dust),
+        });
+        logger.info(`Wallet restored from state saved ${saved.savedAt}`);
+      } catch (e) {
+        logger.warn(`Saved wallet state unusable (${String(e)}); syncing from genesis`);
+        wallet = fresh;
+      }
+    }
+    registerStateSaver(wallet, stateId);
 
     logger.info(
       `Wallet built from ${secret.kind}`,
@@ -270,10 +306,26 @@ export async function syncWallet(
   timeout = Number(process.env['SYNC_TIMEOUT_MS'] ?? timeout);
   logger.info(`Syncing wallet (timeout ${Math.round(timeout / 60_000)} min)...`);
   let emissionCount = 0;
+  // Save progress every few minutes so an interrupted sync resumes instead of restarting.
+  const save = stateSaverFor(wallet);
+  let lastSave = Date.now();
+  let saving = false;
+  const maybeSave = () => {
+    if (!save || saving || Date.now() - lastSave < 180_000) return;
+    saving = true;
+    save()
+      .then(() => logger.info(`Wallet state saved at emission ${emissionCount}`))
+      .catch((e: unknown) => logger.warn(`Could not save wallet state: ${String(e)}`))
+      .finally(() => {
+        saving = false;
+        lastSave = Date.now();
+      });
+  };
   return Rx.firstValueFrom(
     wallet.state().pipe(
       Rx.tap((state: FacadeState) => {
         emissionCount++;
+        maybeSave();
         const shielded = isProgressStrictlyComplete(state.shielded.state.progress);
         const unshielded = isProgressStrictlyComplete(state.unshielded.progress);
         const dust = isProgressStrictlyComplete(state.dust.state.progress);
@@ -298,6 +350,10 @@ export async function syncWallet(
           isProgressStrictlyComplete(state.unshielded.progress),
       ),
       Rx.tap(() => logger.info(`Wallet sync complete after ${emissionCount} emissions`)),
+      Rx.concatMap(async (state: FacadeState) => {
+        await save?.().catch((e: unknown) => logger.warn(`Could not save wallet state: ${String(e)}`));
+        return state;
+      }),
       Rx.timeout({
         each: timeout,
         with: () =>

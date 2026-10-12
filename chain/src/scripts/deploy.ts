@@ -17,7 +17,7 @@ import { httpClientProofProvider } from '@midnight-ntwrk/midnight-js-http-client
 import { NodeZkConfigProvider } from '@midnight-ntwrk/midnight-js-node-zk-config-provider';
 import { levelPrivateStateProvider } from '@midnight-ntwrk/midnight-js-level-private-state-provider';
 import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
-import { toHex } from '@midnight-ntwrk/midnight-js-utils';
+import { fromHex, toHex } from '@midnight-ntwrk/midnight-js-utils';
 import { DustSecretKey } from '@midnight-ntwrk/midnight-js-protocol/ledger';
 import { DustAddress } from '@midnight-ntwrk/wallet-sdk';
 import { createPrivateState, randomBytes } from '@undying-ledger/contract';
@@ -57,7 +57,8 @@ const memberSecrets = Array.from({ length: 5 }, () => randomBytes(32));
 const secretarySecret = randomBytes(32);
 const maintainerSecret = randomBytes(32);
 const groupSecret = randomBytes(32);
-const feeKeySeed = randomBytes(32);
+// GROUP_FEE_KEY_SEED lets the fee key's wallet start syncing before the deploy (sync-wallets.ts).
+const feeKeySeed = process.env['GROUP_FEE_KEY_SEED'] ? fromHex(process.env['GROUP_FEE_KEY_SEED']) : randomBytes(32);
 
 const api = await UndyingAPI.deploy(providers, zkConfigPath, {
   memberSecrets,
