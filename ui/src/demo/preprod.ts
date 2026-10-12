@@ -19,6 +19,8 @@ export type PreprodRun = {
   sunset?: { txHash: string; block: number; at: string };
   /** The book keeps working after sunset: a meeting recorded on the same group, no vendor key left. */
   afterSunset?: { recordMeeting: { txHash: string; block: number } };
+  /** A second group (1 h grace) where the vendor checked in; a member's sunset was then refused. */
+  heartbeat?: { contract: string; deployTxHash: string; txHash: string; block: number; sunsetRefused: string };
 };
 
 export const PREPROD_RUN: PreprodRun | null = {
@@ -49,6 +51,13 @@ export const PREPROD_RUN: PreprodRun | null = {
   },
   "afterSunset": {
     "recordMeeting": { "txHash": "ec0e88f8c2326b95f326e22ec04286af3ab46ba9302e585cefae2d4d7157c99a", "block": 2950410 }
+  },
+  "heartbeat": {
+    "contract": "f1c7d8dc5a02ae4ce69898db599862bd1c2b79457b4c5db20f5c4b4054ec3485",
+    "deployTxHash": "c0a2ab571d01eabfe6b6aafc002eb128f61df74779e7040d1786b7ae62feaf8a",
+    "txHash": "4fd7f18cd031d78332b4d1c09c5a62354d73197c63f4f2021068dbc93973d706",
+    "block": 2955062,
+    "sunsetRefused": "The maintainer is still sending heartbeats"
   }
 };
 

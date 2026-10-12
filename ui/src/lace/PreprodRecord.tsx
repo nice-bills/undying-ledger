@@ -87,6 +87,19 @@ export function PreprodRecord() {
           )}
         </tbody>
       </table>
+      {r.heartbeat && (
+        <p className="note">
+          On a second group (
+          <a className="textlink" href={contractLink(r.heartbeat.contract)} target="_blank" rel="noreferrer">
+            {short(r.heartbeat.contract)}
+          </a>
+          ) the vendor sent a{' '}
+          <a className="textlink" href={txLink(r.heartbeat.txHash)} target="_blank" rel="noreferrer">
+            heartbeat {short(r.heartbeat.txHash)}
+          </a>
+          , paid from its own DUST. A member then tried sunset and the contract refused: “{r.heartbeat.sunsetRefused}”.
+        </p>
+      )}
     </div>
   );
 }

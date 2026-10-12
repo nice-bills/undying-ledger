@@ -53,7 +53,7 @@ Pinned versions (Preprod support matrix, 9 Oct 2026): Compact 0.31.1, compact-ru
 
 **Still only tested with mocks**
 - Lace: `payFees:false`, Lace's finalized transaction into the relay, `levelPrivateStateProvider` in a real browser, browser Blockfrost CORS with a valid token. Needs Lace on Preprod with a throwaway wallet; the owner has to do this or drive it.
-- `heartbeat` on Preprod. (`sunset` ran: `76cadb73…3fd0f9`, block 2,950,326, by a 0-DUST member through the relay, `npm run sunset:preprod -w chain`. The group is in SUNSET; after it, `recordMeeting` `ec0e88f8…57c99a` (block 2,950,410) and `attestSavings` `288b0711…d6fc55` (block 2,950,415) ran through the relay with 0 DUST.)
+- (`heartbeat` ran on Preprod on 12 Oct: second group `f1c7d8dc…ec3485` (1 h grace, deploy `c0a2ab57…feaf8a`, block 2,955,001), `heartbeat` `4fd7f18c…73d706` (block 2,955,062, 1 SPECK from the vendor's own DUST; the relay does not sponsor admin calls), then a member's `sunset` was refused by the circuit, `npm run heartbeat:preprod -w chain`, secrets in `.preprod/group2.json`. `sunset` ran: `76cadb73…3fd0f9`, block 2,950,326, by a 0-DUST member through the relay, `npm run sunset:preprod -w chain`. The group is in SUNSET; after it, `recordMeeting` `ec0e88f8…57c99a` (block 2,950,410) and `attestSavings` `288b0711…d6fc55` (block 2,950,415) ran through the relay with 0 DUST.)
 
 **Done and verified in the cloud session**
 - 50 unit tests, typecheck, e2e 8 passed / 2 agentic skipped at 390 and 430 (e2e needs Node >= 22.22.3; the container has 22.22.0, so a Node 24 tarball was used).
@@ -68,7 +68,7 @@ Pinned versions (Preprod support matrix, 9 Oct 2026): Compact 0.31.1, compact-ru
 
 **Next steps, in order**
 1. Lace `payFees:false` on Preprod (owner, in a real browser with Lace and a throwaway wallet): PREPROD.md step 9. Cannot run in the cloud container (no extension, no wallet UI). If Lace refuses `payFees:false`, build the burner key in the member app (Wave 3 roadmap item 4) so the relay balances.
-2. Deck (Google Slides "Undying Ledger - AKINDO Midnight Buildathon", owner's Drive): slides 9, 12, 13 and 14 updated in place on 12 Oct to the Preprod run (1 SPECK fee, 5 calls by a 0-DUST caller, verified vs not-yet-verified split). Re-check after the Lace test.
+2. Deck (Google Slides "Undying Ledger - AKINDO Midnight Buildathon", owner's Drive): slides 9, 12, 13 and 14 updated in place on 12 Oct to the Preprod run (1 SPECK fee, 5 calls by a 0-DUST caller, verified vs not-yet-verified split; heartbeat moved to verified). Re-check after the Lace test.
 3. The owner submits on AKINDO personally. **Do not submit, post publicly, or spend money without the owner's explicit yes.** Aim for 17 Oct.
 
 ## Design rules (the owner's standing rules; do not drift)

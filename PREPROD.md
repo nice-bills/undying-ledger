@@ -221,6 +221,20 @@ and whether the relay's `balanceFinalizedTransaction` accepts what Lace returns.
 URL in the live page's relay field (or `&relay=` in the page URL). The relay answers CORS
 preflights from any origin.
 
+### 10b. Optional: heartbeat and a refused sunset
+
+`heartbeat` is an admin call, so the vendor's wallet pays its own fee; the relay only sponsors
+group calls. Deploy a group with a grace period long enough to test inside, wait a minute, then:
+
+```bash
+DEPLOY_OUT=.preprod/group2.json GRACE_SECONDS=3600 MIDNIGHT_NETWORK=preprod npm run deploy:preprod -w chain
+GROUP_JSON=.preprod/group2.json HEARTBEAT_OUT=.preprod/heartbeat.json npm run heartbeat:preprod -w chain
+```
+
+The script sends `heartbeat(now - 60 s)` and then has a member try `sunset()`, which the
+circuit refuses with "The maintainer is still sending heartbeats" before anything is sent. Ran
+on 12 Oct 2026: heartbeat `4fd7f18c…73d706`, block 2,955,062, 1 SPECK.
+
 ### 11. Stop
 
 ```bash
