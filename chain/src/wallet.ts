@@ -265,7 +265,10 @@ export async function syncWallet(
   wallet: WalletFacade,
   timeout = 300_000,
 ): Promise<FacadeState> {
-  logger.info('Syncing wallet...');
+  // SYNC_TIMEOUT_MS overrides every caller: a fresh Preprod wallet syncs DUST from genesis, which
+  // took longer than 10 minutes on 12 Oct 2026.
+  timeout = Number(process.env['SYNC_TIMEOUT_MS'] ?? timeout);
+  logger.info(`Syncing wallet (timeout ${Math.round(timeout / 60_000)} min)...`);
   let emissionCount = 0;
   return Rx.firstValueFrom(
     wallet.state().pipe(
@@ -274,9 +277,10 @@ export async function syncWallet(
         const shielded = isProgressStrictlyComplete(state.shielded.state.progress);
         const unshielded = isProgressStrictlyComplete(state.unshielded.progress);
         const dust = isProgressStrictlyComplete(state.dust.state.progress);
-        logger.info(
-          `Wallet sync [${emissionCount}]: shielded=${shielded}, unshielded=${unshielded}, dust=${dust}`,
-        );
+        // Every emission at debug; every 500th at info with the DUST progress, so a long sync is visible.
+        const line = `Wallet sync [${emissionCount}]: shielded=${shielded}, unshielded=${unshielded}, dust=${dust}`;
+        if (emissionCount % 500 === 1) logger.info(`${line} dust.progress=${JSON.stringify(state.dust.state.progress, (_k, v) => (typeof v === 'bigint' ? v.toString() : v))}`);
+        else logger.debug(line);
         if (!shielded) {
           logger.debug(`  shielded.progress: ${JSON.stringify(state.shielded.state.progress)}`);
         }
