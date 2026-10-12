@@ -68,7 +68,7 @@ Pinned versions (Preprod support matrix, 9 Oct 2026): Compact 0.31.1, compact-ru
 
 **Next steps, in order**
 1. Lace `payFees:false` on Preprod (owner, in a real browser with Lace and a throwaway wallet): PREPROD.md step 9. Cannot run in the cloud container (no extension, no wallet UI). If Lace refuses `payFees:false`, build the burner key in the member app (Wave 3 roadmap item 4) so the relay balances.
-2. Deck (Google Slides "Undying Ledger - AKINDO Midnight Buildathon", owner's Drive): slides 9, 12, 13 and 14 still describe the pre-Preprod state. Needs the Google Slides connector to edit in place.
+2. Deck (Google Slides "Undying Ledger - AKINDO Midnight Buildathon", owner's Drive): slides 9, 12, 13 and 14 updated in place on 12 Oct to the Preprod run (1 SPECK fee, 5 calls by a 0-DUST caller, verified vs not-yet-verified split). Re-check after the Lace test.
 3. The owner submits on AKINDO personally. **Do not submit, post publicly, or spend money without the owner's explicit yes.** Aim for 17 Oct.
 
 ## Design rules (the owner's standing rules; do not drift)
