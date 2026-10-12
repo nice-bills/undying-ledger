@@ -18,6 +18,8 @@ import { NodeZkConfigProvider } from '@midnight-ntwrk/midnight-js-node-zk-config
 import { levelPrivateStateProvider } from '@midnight-ntwrk/midnight-js-level-private-state-provider';
 import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
 import { toHex } from '@midnight-ntwrk/midnight-js-utils';
+import { DustSecretKey } from '@midnight-ntwrk/midnight-js-protocol/ledger';
+import { DustAddress } from '@midnight-ntwrk/wallet-sdk';
 import { createPrivateState, randomBytes } from '@undying-ledger/contract';
 import { getConfig } from '../config.js';
 import { MidnightWalletProvider, syncWallet, type WalletSecret } from '../wallet.js';
@@ -76,6 +78,8 @@ const secrets = JSON.stringify({
   maintainerSecret: toHex(maintainerSecret),
   memberSecrets: memberSecrets.map(toHex),
   groupFeeKeySeed: toHex(feeKeySeed),
+  // Register or designate tNIGHT to this address so the group fee key earns DUST (PREPROD.md step 10).
+  groupFeeKeyDustAddress: DustAddress.encodePublicKey(cfg.networkId, DustSecretKey.fromSeed(feeKeySeed).publicKey),
 }, null, 2);
 // DEPLOY_OUT=<file> writes the secrets to a private file (mode 600) instead of the terminal.
 if (process.env['DEPLOY_OUT']) writeFileSync(process.env['DEPLOY_OUT'], secrets + '\n', { mode: 0o600 });

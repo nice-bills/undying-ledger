@@ -17,7 +17,7 @@
 //   GROUP_FEE_KEY_SEED=<64 hex>  GROUP_CONTRACT=<contract address hex>
 //   BLOCKFROST_PROJECT_ID=nightpreprod... MIDNIGHT_NETWORK=preprod MIDNIGHT_PROOF_SERVER=http://127.0.0.1:6300 npm run relay -w chain
 //
-//   GET  /health   -> { status, dust, epoch }
+//   GET  /health   -> { status, dust, contract, dustAddress }
 //   POST /sponsor  -> { tx: "<hex FinalizedTransaction, bound, no fee>" } => { success, txId }
 
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
@@ -36,6 +36,7 @@ import {
 import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
 import { fromHex, ttlOneHour } from '@midnight-ntwrk/midnight-js-utils';
 import {
+  DustAddress,
   DustWallet,
   InMemoryTransactionHistoryStorage,
   PublicKey,
@@ -78,6 +79,10 @@ const walletConfig = {
 const throwaway = generateRandomSeed();
 const throwawayShielded = ZswapSecretKeys.fromSeed(throwaway);
 const groupDustKey = DustSecretKey.fromSeed(feeKeySeed);
+// The address the NGO (or a relative) registers or designates NIGHT to, so the key earns DUST.
+// Printed before the long first sync so it can be funded while the wallet catches up.
+const feeKeyDustAddress = DustAddress.encodePublicKey(cfg.networkId, groupDustKey.publicKey);
+logger.info(`Group fee key DUST address (register or designate NIGHT here): ${feeKeyDustAddress}`);
 const keystore = createKeystore(throwaway, cfg.networkId as never);
 
 const facade = await WalletFacade.init({
@@ -97,6 +102,11 @@ function assertGroupCallOnly(tx: FinalizedTransaction): void {
   const intents = tx.intents;
   if (!intents || intents.size === 0) throw new Error('No contract call in transaction');
   for (const intent of intents.values()) {
+    // If the member's wallet already spent DUST on this call (Lace ignoring payFees:false),
+    // adding the group fee would charge twice. Refuse; the member's wallet can submit it as is.
+    if ((intent.dustActions?.spends.length ?? 0) > 0) {
+      throw new Error('This call already carries a DUST fee from the member’s wallet; the relay will not add a second one');
+    }
     for (const action of intent.actions) {
       if (!(action instanceof ContractCall)) throw new Error('Only contract calls are sponsored');
       if (String(action.address).toLowerCase() !== groupContract) throw new Error('Not this group’s contract');
@@ -153,7 +163,7 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
     return;
   }
   if (req.method === 'GET' && req.url === '/health') {
-    send(res, 200, { status: 'ok', dust: (await dustBalance()).toString(), contract: groupContract });
+    send(res, 200, { status: 'ok', dust: (await dustBalance()).toString(), contract: groupContract, dustAddress: feeKeyDustAddress });
     return;
   }
   if (req.method === 'POST' && req.url === '/sponsor') {

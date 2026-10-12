@@ -182,8 +182,8 @@ declined, wrong network, no prover or a remote one, no indexer, contract not fou
 > `window.midnight` and mocked providers, and by an e2e smoke test of `#/live` without Lace.
 > **Not yet run against Preprod.** Open question: whether Lace honours
 > `balanceUnsealedTransaction(tx, { payFees: false })`. If it refuses, the page says so and offers
-> **Let Lace pay this fee instead**. If it accepts but still adds its own fee, the page cannot
-> tell and the relay would add a second one.
+> **Let Lace pay this fee instead**. If it accepts but still adds its own fee, the relay refuses
+> the call rather than add a second fee (written, not yet run).
 
 ### 10. Optional: the group fee-key relay
 
@@ -193,9 +193,12 @@ MIDNIGHT_NETWORK=preprod npm run relay -w chain
 ```
 
 The relay starts a DUST wallet from the group key and adds the fee to members' calls for this
-contract only. For it to pay anything, some tNIGHT must be registered (or redirected) to the
-fee key's DUST address, and new DUST starts at zero. The relay does not print that address yet;
-that is open work. Also open: whether Lace honours `balanceUnsealedTransaction(tx, { payFees: false })`,
+contract only. For it to pay anything, some tNIGHT must be registered (or designated) to the
+fee key's DUST address, and new DUST starts at zero. The deploy step writes that address to
+`.preprod/group.json` as `groupFeeKeyDustAddress`, the relay logs it before its first sync, and
+`GET /health` returns it as `dustAddress`. The relay also refuses a call that already carries a
+DUST fee from the member's wallet, so a fee is never paid twice. (Both changes were written
+without a network or installed packages; run `npm run typecheck` first.) Also open: whether Lace honours `balanceUnsealedTransaction(tx, { payFees: false })`,
 and whether the relay's `balanceFinalizedTransaction` accepts what Lace returns. Put the relay's
 URL in the live page's relay field (or `&relay=` in the page URL). The relay answers CORS
 preflights from any origin.
