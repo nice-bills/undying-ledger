@@ -18,9 +18,11 @@ A member's call was paid by the **group fee key**: the wallet that signed `recor
 | `recordMeeting`, fee from the group fee key | [`abbb61e7…1becc5`](https://preprod.midnightexplorer.com/transactions/abbb61e7d1557627f3a2d655c46beee4999315817eeb517d5959db03e31becc5) | 2,950,140 |
 | `attestSavings` (“at least N shares”), fee from the group fee key | [`c40214ef…06e320`](https://preprod.midnightexplorer.com/transactions/c40214efed2fdd2869c789166b3dd575a5140fee9e09d55af7f720ec7406e320) | 2,950,145 |
 | `sunset` by a member after the 300 s grace: the vendor key is erased | [`76cadb73…3fd0f9`](https://preprod.midnightexplorer.com/transactions/76cadb73800ccc27b7e8f2f1df02a499008566559445c7e2f1162f653e3fd0f9) | 2,950,326 |
+| `recordMeeting` **after sunset**, no vendor key left | [`ec0e88f8…57c99a`](https://preprod.midnightexplorer.com/transactions/ec0e88f8c2326b95f326e22ec04286af3ab46ba9302e585cefae2d4d7157c99a) | 2,950,410 |
+| `attestSavings` after sunset | [`288b0711…d6fc55`](https://preprod.midnightexplorer.com/transactions/288b07118a38ad6567ccd70d7e34eb116520302253484b92abd3979190d6fc55) | 2,950,415 |
 
 - **Fee:** 1 SPECK per call (10⁻¹⁵ DUST) as the indexer and the explorer report it. The fee key spent 1,001 SPECK per call: the fee plus the wallet SDK's fixed 1,000 SPECK overhead.
-- **Proofs:** 3.9 s (`recordMeeting`) and 3.8 s (`attestSavings`) on the local proof server 8.1.0; about 25 to 30 s from submit to final.
+- **Proofs:** 2.9 to 3.9 s (`recordMeeting`) and 3.0 to 3.8 s (`attestSavings`) on the local proof server 8.1.0; about 25 to 30 s from submit to final.
 - **The endowment:** the deployer sent 2,500 tNIGHT to an NGO key, which registered it to the group fee key's DUST address (`register-dust endow`); the key had DUST within minutes.
 - **What did not run:** the member side here was a Node wallet-SDK script, not Lace. Lace with `payFees: false` is still untested (see Known limits).
 

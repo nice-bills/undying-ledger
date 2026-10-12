@@ -17,6 +17,8 @@ export type PreprodRun = {
   measuredAt: string;
   /** Any member called sunset after the grace period, through the relay, holding 0 DUST. */
   sunset?: { txHash: string; block: number; at: string };
+  /** The book keeps working after sunset: a meeting recorded on the same group, no vendor key left. */
+  afterSunset?: { recordMeeting: { txHash: string; block: number } };
 };
 
 export const PREPROD_RUN: PreprodRun | null = {
@@ -44,6 +46,9 @@ export const PREPROD_RUN: PreprodRun | null = {
     "txHash": "76cadb73800ccc27b7e8f2f1df02a499008566559445c7e2f1162f653e3fd0f9",
     "block": 2950326,
     "at": "2026-10-12T15:43:00Z"
+  },
+  "afterSunset": {
+    "recordMeeting": { "txHash": "ec0e88f8c2326b95f326e22ec04286af3ab46ba9302e585cefae2d4d7157c99a", "block": 2950410 }
   }
 };
 

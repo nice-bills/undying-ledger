@@ -74,6 +74,17 @@ export function PreprodRecord() {
               <td className="r">vendor key erased</td>
             </tr>
           )}
+          {r.afterSunset && (
+            <tr>
+              <th scope="row">meeting, after sunset</th>
+              <td>
+                <a className="textlink" href={txLink(r.afterSunset.recordMeeting.txHash)} target="_blank" rel="noreferrer">
+                  {short(r.afterSunset.recordMeeting.txHash)}
+                </a>
+              </td>
+              <td className="r">no vendor</td>
+            </tr>
+          )}
         </tbody>
       </table>
     </div>

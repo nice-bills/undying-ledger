@@ -53,7 +53,7 @@ Pinned versions (Preprod support matrix, 9 Oct 2026): Compact 0.31.1, compact-ru
 
 **Still only tested with mocks**
 - Lace: `payFees:false`, Lace's finalized transaction into the relay, `levelPrivateStateProvider` in a real browser, browser Blockfrost CORS with a valid token. Needs Lace on Preprod with a throwaway wallet; the owner has to do this or drive it.
-- `heartbeat` on Preprod. (`sunset` ran: `76cadb73…3fd0f9`, block 2,950,326, by a 0-DUST member through the relay, `npm run sunset:preprod -w chain`. The group is now in SUNSET; `recordMeeting` should still work, not yet tried after sunset.)
+- `heartbeat` on Preprod. (`sunset` ran: `76cadb73…3fd0f9`, block 2,950,326, by a 0-DUST member through the relay, `npm run sunset:preprod -w chain`. The group is in SUNSET; after it, `recordMeeting` `ec0e88f8…57c99a` (block 2,950,410) and `attestSavings` `288b0711…d6fc55` (block 2,950,415) ran through the relay with 0 DUST.)
 
 **Done and verified in the cloud session**
 - 50 unit tests, typecheck, e2e 8 passed / 2 agentic skipped at 390 and 430 (e2e needs Node >= 22.22.3; the container has 22.22.0, so a Node 24 tarball was used).
@@ -68,7 +68,6 @@ Pinned versions (Preprod support matrix, 9 Oct 2026): Compact 0.31.1, compact-ru
 
 **Next steps, in order**
 1. Re-render the launch video and demo video so the receipt shows the measured 1 SPECK fee; add a shot of the explorer page for `abbb61e7…`.
-2. Optional: record a meeting after sunset on Preprod (`measure` with a fresh meeting) to prove beat 5 on-chain.
 3. Lace `payFees:false` run (owner): PREPROD.md step 9.
 4. Deck: the fee slide (still "~1 wk", no measured fee) gets the measured numbers; source is outside this repo.
 5. The owner rotates the Blockfrost token (it was printed once in a session log before the redaction fix).
