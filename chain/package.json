@@ -9,7 +9,9 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "relay": "vite-node src/relay/fee-key-relay.ts",
     "deploy:preprod": "MIDNIGHT_NETWORK=preprod vite-node src/scripts/deploy.ts",
-    "measure:preprod": "MIDNIGHT_NETWORK=preprod vite-node src/scripts/measure.ts"
+    "measure:preprod": "MIDNIGHT_NETWORK=preprod vite-node src/scripts/measure.ts",
+    "addresses": "vite-node src/scripts/addresses.ts",
+    "register-dust": "vite-node src/scripts/register-dust.ts"
   },
   "dependencies": {
     "@midnight-ntwrk/compact-runtime": "0.16.0",

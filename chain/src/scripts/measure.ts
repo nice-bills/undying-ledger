@@ -9,8 +9,11 @@
 //   SECRETARY_SECRET=<hex>  GROUP_SECRET=<hex>  MEMBER0_SECRET=<hex> \
 //   MIDNIGHT_NETWORK=preprod npm run measure:preprod -w chain
 //
-// The secrets are the ones deploy:preprod printed. The deployer wallet pays its own DUST here
-// (wallet mode), so the fee read back is the plain network fee for the call. Fees come from the
+// The secrets are the ones deploy:preprod printed. Without RELAY_URL the wallet pays its own DUST
+// (wallet mode). With RELAY_URL=http://localhost:3001 the wallet balances only its own value, adds
+// no DUST, and the group fee-key relay adds the fee and submits (relay mode). CALLER_SEED picks a
+// different wallet to sign the calls (e.g. one that has never held DUST); it defaults to the deployer.
+// Either way the fee read back is the plain network fee for the call. Fees come from the
 // indexer's RegularTransaction.fee (SPECK; 1 DUST = 10^15 SPECK), not from a balance difference,
 // because DUST keeps generating while a proof runs.
 
@@ -21,7 +24,8 @@ import { httpClientProofProvider } from '@midnight-ntwrk/midnight-js-http-client
 import { NodeZkConfigProvider } from '@midnight-ntwrk/midnight-js-node-zk-config-provider';
 import { levelPrivateStateProvider } from '@midnight-ntwrk/midnight-js-level-private-state-provider';
 import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
-import { fromHex } from '@midnight-ntwrk/midnight-js-utils';
+import { fromHex, toHex } from '@midnight-ntwrk/midnight-js-utils';
+import type { FinalizedTransaction } from '@midnight-ntwrk/midnight-js-protocol/ledger';
 import { applyEntry, createPrivateState, randomBytes, ZERO_PASSBOOK, type Entry, type UndyingPrivateState } from '@undying-ledger/contract';
 import { getConfig, redactToken } from '../config.js';
 import { MidnightWalletProvider, syncWallet, type WalletSecret } from '../wallet.js';
@@ -40,9 +44,12 @@ const cfg = getConfig();
 setNetworkId(cfg.networkId);
 const zkConfigPath = path.resolve(import.meta.dirname, '../../../contract/src/managed/undying');
 
-const secret: WalletSecret = process.env['DEPLOYER_MNEMONIC']
-  ? { kind: 'mnemonic', value: process.env['DEPLOYER_MNEMONIC'] }
-  : { kind: 'seed', value: env('DEPLOYER_SEED') };
+const relayUrl = process.env['RELAY_URL']?.replace(/\/$/, '');
+const secret: WalletSecret = process.env['CALLER_SEED']
+  ? { kind: 'seed', value: process.env['CALLER_SEED'] }
+  : process.env['DEPLOYER_MNEMONIC']
+    ? { kind: 'mnemonic', value: process.env['DEPLOYER_MNEMONIC'] }
+    : { kind: 'seed', value: env('DEPLOYER_SEED') };
 const wallet = await MidnightWalletProvider.build(logger as never, { walletNetworkId: cfg.networkId, ...cfg } as never, secret);
 await wallet.start();
 await syncWallet(logger as never, wallet.wallet, 600_000);
@@ -61,6 +68,24 @@ const timedProver = {
   },
 };
 
+// Relay mode: balance own value only (no DUST), then hand the bound call to the relay.
+const relayWallet = {
+  getCoinPublicKey: () => wallet.getCoinPublicKey(),
+  getEncryptionPublicKey: () => wallet.getEncryptionPublicKey(),
+  balanceTx: (tx: Parameters<typeof wallet.balanceOwnValueAndFinalize>[0], ttl?: Date) => wallet.balanceOwnValueAndFinalize(tx, ttl),
+};
+const relayMidnight = {
+  submitTx: async (tx: FinalizedTransaction): Promise<string> => {
+    const res = await fetch(`${relayUrl}/sponsor`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ tx: toHex(tx.serialize()) }) });
+    const body = (await res.json()) as { success: boolean; txId?: string; error?: string };
+    if (!body.success || !body.txId) throw new Error(`Relay refused: ${body.error ?? res.status}`);
+    logger.info(`Relay added the group fee and submitted ${body.txId}`);
+    return body.txId;
+  },
+};
+const callerDustBefore = await wallet.getDustBalance();
+logger.info(`Mode: ${relayUrl ? `relay (${relayUrl})` : 'wallet pays'}; caller DUST before: ${callerDustBefore} SPECK`);
+
 const providers = {
   privateStateProvider: levelPrivateStateProvider({
     privateStateStoreName: 'undying-secretary',
@@ -70,8 +95,8 @@ const providers = {
   publicDataProvider: indexerPublicDataProvider(cfg.indexer, cfg.indexerWS),
   zkConfigProvider: zk,
   proofProvider: timedProver,
-  walletProvider: wallet,
-  midnightProvider: wallet,
+  walletProvider: relayUrl ? relayWallet : wallet,
+  midnightProvider: relayUrl ? relayMidnight : wallet,
 } as unknown as UndyingProviders;
 
 /** Read the paid fee of a transaction from the indexer (SPECK). */
@@ -116,10 +141,14 @@ await providers.privateStateProvider.set(undyingPrivateStateKey, { ...before, pa
 const attFee = await paidFee(att.public.txHash);
 
 const secs = (ms: number) => Math.round(ms / 100) / 10;
+const callerDustAfter = await wallet.getDustBalance();
 const result = {
   network: cfg.networkId,
-  recordMeeting: { feeSpeck: recFee.toString(), feeDust: dust(recFee), proofSeconds: secs(recProof), submitToFinalSeconds: secs(recWall) },
-  attestSavings: { feeSpeck: attFee.toString(), feeDust: dust(attFee), proofSeconds: secs(attProof), submitToFinalSeconds: secs(attWall) },
+  paidBy: relayUrl ? 'group fee key (relay)' : 'caller wallet',
+  contract: env('GROUP_CONTRACT'),
+  callerDustSpeck: { before: callerDustBefore.toString(), after: callerDustAfter.toString() },
+  recordMeeting: { txHash: rec.public.txHash, txId: rec.public.txId, feeSpeck: recFee.toString(), feeDust: dust(recFee), proofSeconds: secs(recProof), submitToFinalSeconds: secs(recWall) },
+  attestSavings: { txHash: att.public.txHash, txId: att.public.txId, feeSpeck: attFee.toString(), feeDust: dust(attFee), proofSeconds: secs(attProof), submitToFinalSeconds: secs(attWall) },
 };
 console.log(JSON.stringify(result, null, 2));
 const feeForUi = Number(recFee) / Number(SPECK_PER_DUST);
