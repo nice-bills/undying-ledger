@@ -34,7 +34,7 @@ def P(m):
 # C - F - G - C, one chord per bar (MIDI roots)
 prog = [(48, [60, 64, 67]), (53, [65, 69, 72]), (55, [67, 71, 74]), (48, [60, 64, 67])]
 pattern = [(0, 0), (0.5, 2), (1, 1), (1.5, 2), (2, 0), (2.25, 1), (2.75, 2), (3.5, 1)]  # (beat, chord tone)
-dark = (24.0, 30.0); end = 46.5
+dark = (24.0, 30.0); end = 51.5
 bars = int(np.ceil(dur / BAR))
 for b in range(bars):
     t0 = b * BAR

@@ -97,9 +97,16 @@ await at(41.6); await tap(app.getByRole('button', { name: 'Make a proof slip' })
 await at(42.4); await S('zoom', beat('.slipstage', 5), 1.2);
 await at(44.6); await S('callout', '[data-testid=slip-done] h3', 'The only thing the lender sees');
 await at(45.8); await S('uncall'); await S('zoom', null);
+// 07 ON-CHAIN: the same book on Midnight Preprod, read from the recorded run (no wallet, no token)
+await at(46.5); await S('cap', 'On Midnight Preprod', 'Not a mockup.', 'It ran on-chain.', 'A meeting and a proof, paid by the group fee key. <b>The member held 0 DUST.</b>', 0);
+await page.evaluate(() => { document.getElementById('app').contentWindow.location.hash = '#/live'; });
+await app.getByTestId('preprod-record').waitFor({ timeout: 30000 });
+await at(47.8); await S('zoom', '[data-testid=preprod-record]', 1.25);
+await at(49); await S('callout', '[data-testid=preprod-record] tbody tr:nth-child(2) a', 'recordMeeting, block 2,950,140');
+await at(50.4); await S('uncall'); await S('zoom', null);
 // END on the product, one line, nothing claimed that is not true today
-await at(46.5); await S('cap', 'Undying Ledger · Built on Midnight', 'Grants end.', 'Savings don’t.', 'This demo runs the contract’s <b>real compiled circuits</b> in your browser.', 0); await S('url', true);
-await at(50);
+await at(51.5); await S('cap', 'Undying Ledger · Built on Midnight', 'Grants end.', 'Savings don’t.', 'This demo runs the contract’s <b>real compiled circuits</b> in your browser.', 0); await S('url', true);
+await at(55);
 await cdp.send('Page.stopScreencast');
 const sfx = (await page.evaluate(() => window.__sfx)).map(([k, t]) => [k, +(t - frames[0]).toFixed(3)]).filter(([, t]) => t >= 0);
 writeFileSync(`${outDir}/times.json`, JSON.stringify(frames.map((t) => t - frames[0])));

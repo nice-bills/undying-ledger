@@ -10,13 +10,14 @@ Built for the AKINDO Midnight Buildathon, Wave 2.
 
 ## Ran on Midnight Preprod (12 October 2026)
 
-A member's call was paid by the **group fee key**: the wallet that signed `recordMeeting` and `attestSavings` held **0 DUST before and after**; the fee-key relay added the fee and submitted. Every hash below opens on the explorer.
+A member's call was paid by the **group fee key**: the wallet that signed `recordMeeting`, `attestSavings` and `sunset` held **0 DUST before and after**; the fee-key relay added the fee and submitted. Every hash below opens on the explorer.
 
 | Step | Transaction | Block |
 |---|---|---|
 | Deploy the group contract [`726bb6e0…ed7c61`](https://preprod.midnightexplorer.com/contracts/726bb6e0ce9d67ecc5c587a2f5f509ae39c26dbfd29d71c75f8d7de090ed7c61) | [`e95e3769…f3bef5`](https://preprod.midnightexplorer.com/transactions/e95e3769116b1868e16cd61cca434e00513c264a966383573466b77561f3bef5) | 2,949,765 |
 | `recordMeeting`, fee from the group fee key | [`abbb61e7…1becc5`](https://preprod.midnightexplorer.com/transactions/abbb61e7d1557627f3a2d655c46beee4999315817eeb517d5959db03e31becc5) | 2,950,140 |
 | `attestSavings` (“at least N shares”), fee from the group fee key | [`c40214ef…06e320`](https://preprod.midnightexplorer.com/transactions/c40214efed2fdd2869c789166b3dd575a5140fee9e09d55af7f720ec7406e320) | 2,950,145 |
+| `sunset` by a member after the 300 s grace: the vendor key is erased | [`76cadb73…3fd0f9`](https://preprod.midnightexplorer.com/transactions/76cadb73800ccc27b7e8f2f1df02a499008566559445c7e2f1162f653e3fd0f9) | 2,950,326 |
 
 - **Fee:** 1 SPECK per call (10⁻¹⁵ DUST) as the indexer and the explorer report it. The fee key spent 1,001 SPECK per call: the fee plus the wallet SDK's fixed 1,000 SPECK overhead.
 - **Proofs:** 3.9 s (`recordMeeting`) and 3.8 s (`attestSavings`) on the local proof server 8.1.0; about 25 to 30 s from submit to final.
@@ -192,7 +193,7 @@ See **[PREPROD.md](PREPROD.md)** and `scripts/preprod.sh`: Docker proof server, 
 
 ## Known limits
 
-- **What ran on Preprod, and what has only been tested with mocks.** On Preprod (12 Oct 2026, see the table at the top): DUST registration, the deploy, the NGO endowment, the fee-key relay, and `recordMeeting` and `attestSavings` signed by a 0-DUST caller and paid by the relay, all from Node with the wallet SDK. **Not run on a network:** the browser write path on `#/live` (Lace connect, `payFees: false`, Lace's transaction into the relay, browser private state). It is covered by unit tests with a mocked Lace and mocked providers, which prove the wiring and the error paths, not that Lace behaves like the mock. Open questions:
+- **What ran on Preprod, and what has only been tested with mocks.** On Preprod (12 Oct 2026, see the table at the top): DUST registration, the deploy, the NGO endowment, the fee-key relay, and `recordMeeting`, `attestSavings` and `sunset` signed by a 0-DUST caller and paid by the relay, all from Node with the wallet SDK. **Not run on a network:** the browser write path on `#/live` (Lace connect, `payFees: false`, Lace's transaction into the relay, browser private state). It is covered by unit tests with a mocked Lace and mocked providers, which prove the wiring and the error paths, not that Lace behaves like the mock. Open questions:
   - Does Lace honour `balanceUnsealedTransaction(tx, { payFees: false })`? The API type has it; wallet behaviour is unconfirmed. If Lace refuses, the page says “Lace would not balance this call without paying the fee itself (payFees: false)” and offers to let Lace pay from the member’s own DUST. If Lace accepts but still adds its own fee, the relay now refuses the call rather than add a second fee (written, not yet run).
   - Will the relay accept what Lace returns? `balanceUnsealedTransaction` gives back a finalized transaction and the relay re-balances it with `balanceFinalizedTransaction` for DUST only. That pairing has not been exercised.
   - Does `levelPrivateStateProvider` (IndexedDB through `browser-level`) work in the Vite build in a real browser? It is bundled and typechecked; it was never opened in a browser here.

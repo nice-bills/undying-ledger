@@ -63,6 +63,17 @@ export function PreprodRecord() {
           )}
           <Line label="recordMeeting" tx={r.recordMeeting} />
           <Line label="attestSavings" tx={r.attestSavings} />
+          {r.sunset && (
+            <tr>
+              <th scope="row">sunset</th>
+              <td>
+                <a className="textlink" href={txLink(r.sunset.txHash)} target="_blank" rel="noreferrer">
+                  {short(r.sunset.txHash)}
+                </a>
+              </td>
+              <td className="r">vendor key erased</td>
+            </tr>
+          )}
         </tbody>
       </table>
     </div>

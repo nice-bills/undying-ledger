@@ -15,6 +15,8 @@ export type PreprodRun = {
   recordMeeting: PreprodTx;
   attestSavings: PreprodTx;
   measuredAt: string;
+  /** Any member called sunset after the grace period, through the relay, holding 0 DUST. */
+  sunset?: { txHash: string; block: number; at: string };
 };
 
 export const PREPROD_RUN: PreprodRun | null = {
@@ -37,7 +39,12 @@ export const PREPROD_RUN: PreprodRun | null = {
     "feeDust": "0.000000000000001",
     "proofSeconds": 3.8
   },
-  "measuredAt": "2026-10-12T15:25:15.672Z"
+  "measuredAt": "2026-10-12T15:25:15.672Z",
+  "sunset": {
+    "txHash": "76cadb73800ccc27b7e8f2f1df02a499008566559445c7e2f1162f653e3fd0f9",
+    "block": 2950326,
+    "at": "2026-10-12T15:43:00Z"
+  }
 };
 
 /** Community Midnight explorer (Preprod); these two paths were checked against the real deploy on 12 Oct 2026. */
