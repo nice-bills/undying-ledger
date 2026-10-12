@@ -3,21 +3,21 @@
 Meeting twelve. The secretary records it, every passbook is re-sealed, and the group fee key pays. Members pay nothing.
 
 2
-00:00:15,549 --> 00:00:19,917
+00:00:13,763 --> 00:00:18,131
 On Ama's phone, only she can read her twenty-nine shares.
 
 3
-00:00:21,764 --> 00:00:27,364
+00:00:20,029 --> 00:00:25,629
 Her husband's phone sees five keys and sealed rows. Guessing fails.
 
 4
-00:00:28,586 --> 00:00:42,986
+00:00:26,830 --> 00:00:41,230
 Then the grant ends, and the vendor goes quiet. Closing early is refused. After the grace period, any member calls sunset. The vendor key is erased. Nobody can switch this book off.
 
 5
-00:00:44,742 --> 00:00:51,774
+00:00:42,820 --> 00:00:49,852
 Meeting thirteen is recorded with no vendor and no admin. The fee comes from the group's DUST.
 
 6
-00:00:56,966 --> 00:01:12,566
+00:00:55,160 --> 00:01:10,760
 A loan officer asks for proof. Thirty-three shares is refused; Ama holds thirty-two. Thirty passes. The slip proves at least thirty, and her total never leaves her phone. Undying Ledger, built on Midnight.

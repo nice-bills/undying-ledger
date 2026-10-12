@@ -27,7 +27,7 @@ Undying Ledger is a private record book for a village savings and loan associati
 | `ui/src/demo/measured.ts` | Measured fee and proof time. Null until Preprod runs; `ui/scripts/set-measured.mjs` writes it. While it is null the UI says "placeholder". |
 | `e2e/` | tester.army e2e suite (six-beat story, refusals, legal links, console errors, `#/live` smoke) |
 | `docs/` | Production build. Pages serves the `gh-pages` branch, which `.github/workflows/pages.yml` keeps equal to `docs/`. |
-| `media/` | demo.mp4 (84s, cash-box UI), demo-narrated.mp4 (84s; the synthetic en-NG voice from the earlier cut, edge-tts `en-NG-EzinneNeural`, re-timed to the new beats), demo.srt, screens/, live/, strip.jpg, record-demo.mjs |
+| `media/` | launch-wide.mp4 and launch-tall.mp4 (54 s, `media/launch/make.sh`), demo.mp4 (82 s, cash-box UI), demo-narrated.mp4 (82 s; the synthetic en-NG voice from the earlier cut, edge-tts `en-NG-EzinneNeural`, re-timed to the new beats), demo.srt, screens/, live/, strip.jpg, record-demo.mjs |
 | `scripts/preprod.sh` | One-command Preprod run: `check \| up \| deploy \| measure [--apply] \| down` |
 
 ## Commands
@@ -57,7 +57,7 @@ Pinned versions (Preprod support matrix, 9 Oct 2026): Compact 0.31.1, compact-ru
 
 **Done and verified in the cloud session**
 - 50 unit tests, typecheck, e2e 8 passed / 2 agentic skipped at 390 and 430 (e2e needs Node >= 22.22.3; the container has 22.22.0, so a Node 24 tarball was used).
-- UI rebuilt as the cash box (owner's choice); launch video `media/launch-wide.mp4` and `-tall.mp4` (50 s, `media/launch/make.sh`); demo.mp4 and the narrated cut re-recorded (84 s). Both videos were made BEFORE the measured fee: they show "1 DUST est." on the receipt. Re-render with `media/launch/make.sh` and `media/record-demo.mjs` (then re-time the narration as in the 12 Oct session).
+- UI rebuilt as the cash box (owner's choice); launch video `media/launch-wide.mp4` and `-tall.mp4` (54 s, `media/launch/make.sh`, ends on the Preprod record in `#/live`); demo.mp4 and the narrated cut (82 s; narration re-timed to the new beats). All re-rendered after the measurement, so receipts show 1 SPECK.
 - Proving keys ship in `docs/zk/` so `#/live` can prove from Pages.
 
 **Container notes (cloud)**
@@ -67,7 +67,6 @@ Pinned versions (Preprod support matrix, 9 Oct 2026): Compact 0.31.1, compact-ru
 - Never use `pkill -f <pattern>` in a tool command: it matches the tool's own shell.
 
 **Next steps, in order**
-1. Re-render the launch video and demo video so the receipt shows the measured 1 SPECK fee; add a shot of the explorer page for `abbb61e7…`.
 3. Lace `payFees:false` run (owner): PREPROD.md step 9.
 4. Deck: the fee slide (still "~1 wk", no measured fee) gets the measured numbers; source is outside this repo.
 5. The owner rotates the Blockfrost token (it was printed once in a session log before the redaction fix).
