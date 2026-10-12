@@ -21,7 +21,7 @@
 //   POST /sponsor  -> { tx: "<hex FinalizedTransaction, bound, no fee>" } => { success, txId }
 
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
-import pino from 'pino';
+import { makeLogger } from '../logger.js';
 import {
   ContractCall,
   DustSecretKey,
@@ -51,7 +51,7 @@ import {
 import { getConfig } from '../config.js';
 import { syncWallet } from '../wallet.js';
 
-const logger = pino({ level: process.env['LOG_LEVEL'] ?? 'info' });
+const logger = makeLogger(process.env['LOG_LEVEL'] ?? 'info');
 const MAX_BODY_BYTES = 25 * 1024 * 1024;
 const ALLOWED_ENTRY_POINTS = new Set(['recordMeeting', 'attestSavings', 'addMember', 'handoverSecretary', 'rotateFeeKey', 'sunset']);
 

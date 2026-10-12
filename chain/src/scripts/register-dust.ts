@@ -18,14 +18,14 @@
 
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import pino from 'pino';
+import { makeLogger } from '../logger.js';
 import { nativeToken } from '@midnight-ntwrk/midnight-js-protocol/ledger';
 import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
 import { DustAddress, MidnightBech32m, UnshieldedAddress } from '@midnight-ntwrk/wallet-sdk/address-format';
 import { getConfig } from '../config.js';
 import { MidnightWalletProvider, syncWallet } from '../wallet.js';
 
-const logger = pino({ level: 'info' });
+const logger = makeLogger();
 const cfg = getConfig();
 setNetworkId(cfg.networkId);
 const mode = process.argv[2];

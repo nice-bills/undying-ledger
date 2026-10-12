@@ -11,7 +11,7 @@
 
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
-import pino from 'pino';
+import { makeLogger } from '../logger.js';
 import { indexerPublicDataProvider } from '@midnight-ntwrk/midnight-js-indexer-public-data-provider';
 import { httpClientProofProvider } from '@midnight-ntwrk/midnight-js-http-client-proof-provider';
 import { NodeZkConfigProvider } from '@midnight-ntwrk/midnight-js-node-zk-config-provider';
@@ -26,7 +26,7 @@ import { MidnightWalletProvider, syncWallet, type WalletSecret } from '../wallet
 import { UndyingAPI } from '../api.js';
 import type { UndyingCircuitKeys, UndyingProviders } from '../common.js';
 
-const logger = pino({ level: 'info' });
+const logger = makeLogger();
 const cfg = getConfig();
 setNetworkId(cfg.networkId);
 const zkConfigPath = path.resolve(import.meta.dirname, '../../../contract/src/managed/undying');
