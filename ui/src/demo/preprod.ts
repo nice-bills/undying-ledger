@@ -19,5 +19,7 @@ export type PreprodRun = {
 
 export const PREPROD_RUN: PreprodRun | null = null;
 
-/** Community Midnight explorer (Preprod). Search takes a contract address or transaction hash. */
+/** Community Midnight explorer (Preprod); these two paths were checked against the real deploy on 12 Oct 2026. */
 export const EXPLORER = 'https://preprod.midnightexplorer.com';
+export const txLink = (hash: string) => `${EXPLORER}/transactions/${hash}`;
+export const contractLink = (address: string) => `${EXPLORER}/contracts/${address}`;
