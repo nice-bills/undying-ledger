@@ -8,7 +8,7 @@ import { ASSUMED_FEE_DUST, FEE_IS_MEASURED } from '../demo/fees';
 import { Ghs, Leaf, Loose, Stamp } from '../a2/paper';
 import { anim, printLine, reveal, settle, stampDown, wait } from '../a2/motion';
 import { proving } from '../a2/proving';
-import { MEETING_NO, provingNote, secretaryTicks } from './MeetingBeat';
+import { MEETING_NO, feeShort, provingNote, secretaryTicks } from './MeetingBeat';
 import { contractWords, type BeatProps } from './types';
 
 export const MEETING13 = MEETING_NO + 1;
@@ -145,7 +145,7 @@ export function Meeting13Beat({ e, go, announce }: BeatProps) {
           edge={{ seed: 9, top: { amp: 0.6, n: 8 }, right: { amp: 0.8, n: 10 }, bottom: { kind: 'torn', amp: 4.5, n: 26 }, left: { amp: 0.8, n: 10 } }}
         >
           <div className="hd">Fee chit {MEETING13}</div>
-          <div className="ln">{ASSUMED_FEE_DUST} DUST</div>
+          <div className="ln">{feeShort()}</div>
           <div className="ln">fee key {f.epoch}</div>
           <div className="ln" data-testid="chit-left">
             <span className="n">{Math.floor(f.balance)}</span> left
@@ -170,7 +170,7 @@ export function Meeting13Beat({ e, go, announce }: BeatProps) {
           <p className="note">{provingNote('recordMeeting')}</p>
         </div>
         <p className="after" ref={after} hidden={!done} style={{ maxWidth: '80%' }} data-testid="after13">
-          Recorded{sunset ? ' with no vendor' : ''}. Fee&nbsp;<b>{ASSUMED_FEE_DUST}&nbsp;DUST</b> from the group fee key.
+          Recorded{sunset ? ' with no vendor' : ''}. Fee&nbsp;<b>{feeShort().replace(' ', '\u00a0')}</b> from the group fee key.
         </p>
         <p className="err" role="alert">
           {err}

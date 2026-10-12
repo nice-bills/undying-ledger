@@ -59,7 +59,7 @@ export function countTo(el: HTMLElement | null, from: number, to: number, ms = 6
     el.textContent = fmt(to);
     return Promise.resolve();
   }
-  // Hold the box at the final value's width while counting, so text beside it (GH₵) stays put even in a
+  // Hold the box at the final value's width while counting, so text beside it (GH¢) stays put even in a
   // face without tabular digits. Needs an inline-block element; released when the count lands.
   const held = el.style.minWidth;
   el.textContent = fmt(to);

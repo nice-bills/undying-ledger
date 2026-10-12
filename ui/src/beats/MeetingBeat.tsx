@@ -33,6 +33,9 @@ export function provingNote(kind: 'recordMeeting' | 'attestSavings') {
 }
 
 export const feeWords = () => (FEE_IS_MEASURED ? `${ASSUMED_FEE_DUST} DUST` : `${ASSUMED_FEE_DUST} DUST (placeholder)`);
+/** Short form for the handwritten receipt: the measured fee, or the placeholder marked "est.". */
+export const feeShort = () =>
+  FEE_IS_MEASURED ? `${Number(ASSUMED_FEE_DUST.toPrecision(3))} DUST` : `${ASSUMED_FEE_DUST} DUST est.`;
 
 export function MeetingBeat({ e, go, announce }: BeatProps) {
   const [lines, setLines] = useState<MeetingLine[]>(() => e.suggestedNextMeeting());
@@ -193,8 +196,8 @@ export function MeetingBeat({ e, go, announce }: BeatProps) {
           <span>Receipt</span>
           <span>No. {String(MEETING_NO).padStart(4, '0')}</span>
         </div>
-        <div className="ln">Meeting {MEETING_NO} fee</div>
-        <div className="ln">group fee key {e.fees.epoch}</div>
+        <div className="ln">Meeting {MEETING_NO} fee {feeShort()}</div>
+        <div className="ln">paid: group fee key</div>
         <div className="ln">members: nil</div>
         <Stamp ref={paid} kind="paid" ink="paid" style={{ right: 8, top: 80 }} />
       </Loose>

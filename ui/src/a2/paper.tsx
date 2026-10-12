@@ -6,11 +6,12 @@ import { edgePoly, rng, type EdgeSpec } from './motion';
 
 // ------------------------------------------------------------------ cedi
 
-/** None of the faces has a ₵ glyph, so a C gets a drawn stroke; screen readers hear ₵. */
+/** GH¢ is how prices are written in Ghanaian markets and shops, and every face here has ¢
+ *  (a drawn stroke on a C read as a text cursor). Screen readers hear ₵. */
 export function Ced() {
   return (
     <span className="ced">
-      <span aria-hidden="true">C</span>
+      <span aria-hidden="true">¢</span>
       <span className="vh">₵</span>
     </span>
   );

@@ -135,7 +135,7 @@ h1.disp,h2.disp{font-size:46px;transform:rotate(-1.4deg);transform-origin:left b
 .bal .fig{font:400 44px/1 var(--disp)}
 .bal .sub{font:400 22px/1.1 var(--disp);margin-top:4px}
 /* the display face has no tnum: countTo() holds a min-width (the final value's width) on these boxes while
-   counting, so GH₵ does not slide */
+   counting, so GH¢ does not slide */
 .bal .num{display:inline-block;text-align:end}
 .ledger.pb{margin-top:18px}
 .ledger.pb td{font-size:14.5px;height:40px}
@@ -237,8 +237,7 @@ tr.fresh .skew{display:inline-block;transform:translateY(1px) rotate(.7deg)}
 .rail .foot .legal{display:flex;gap:14px}
 .rail .foot a{color:#CFC5AC;text-decoration:underline;text-underline-offset:2px;display:inline-flex;align-items:center;min-height:44px}
 
-.ced{position:relative;display:inline-block}
-.ced::after{content:"";position:absolute;left:50%;top:-.06em;bottom:-.08em;width:max(1px,.065em);background:currentColor;transform:translateX(-50%)}
+.ced{display:inline}
 
 .addr{display:block;width:100%;margin-top:6px;min-height:44px;padding:8px 10px;border:1.5px solid var(--ink);border-radius:2px;background:transparent;color:var(--ink);font:500 13px/1.3 var(--sans);letter-spacing:.01em}
 .boot{font:500 14px var(--sans);color:#CFC5AC;padding:32px 24px}
