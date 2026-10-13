@@ -34,6 +34,10 @@ import { LiveError } from './errors.js';
 
 /** How long join waits for the indexer to say whether a contract exists. */
 export const CONTRACT_LOOKUP_MS = 25_000;
+/** findDeployedContract first subscribes for the deploy tx over the indexer's websocket and has no
+ * timeout of its own. A wallet indexer whose HTTP works but whose websocket does not (seen with a
+ * real Lace on Preprod, 13 Oct 2026) would leave "Joining the group" on screen forever. */
+export const CONTRACT_ATTACH_MS = 90_000;
 
 const sameBytes = (a: Uint8Array, b: Uint8Array) => a.length === b.length && a.every((x, i) => x === b[i]);
 
@@ -124,12 +128,21 @@ export class UndyingAPI {
     const stored = await providers.privateStateProvider.get(undyingPrivateStateKey);
     const keep =
       stored && sameBytes(stored.localSecret, initialPrivateState.localSecret) && sameBytes(stored.groupSecret, initialPrivateState.groupSecret);
-    const found = await findDeployedContract(providers, {
-      contractAddress: address,
-      compiledContract: makeCompiledUndying(zkConfigPath),
-      privateStateId: undyingPrivateStateKey,
-      ...(keep ? {} : { initialPrivateState }),
-    } as never);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const found = await Promise.race([
+      findDeployedContract(providers, {
+        contractAddress: address,
+        compiledContract: makeCompiledUndying(zkConfigPath),
+        privateStateId: undyingPrivateStateKey,
+        ...(keep ? {} : { initialPrivateState }),
+      } as never),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(
+          () => reject(new LiveError('no-indexer', `The indexer found the group but did not answer its live subscription in ${CONTRACT_ATTACH_MS / 1000} s. Paste a Blockfrost Preprod project ID above to use Blockfrost's indexer instead, and join again.`)),
+          CONTRACT_ATTACH_MS,
+        );
+      }),
+    ]).finally(() => clearTimeout(timer));
     return new UndyingAPI(found as unknown as DeployedUndyingContract, providers);
   }
 

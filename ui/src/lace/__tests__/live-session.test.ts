@@ -88,6 +88,7 @@ const h = vi.hoisted(() => ({
   indexerUrls: [] as string[][],
   findCalls: [] as Record<string, unknown>[],
   calls: [] as { circuit: string; args: unknown[] }[],
+  hangFind: false,
 }));
 
 vi.mock('@undying-ledger/contract', async (orig) => {
@@ -155,6 +156,7 @@ vi.mock('@midnight-ntwrk/midnight-js-contracts', () => ({
   deployContract: vi.fn(),
   findDeployedContract: async (providers: any, opts: any) => {
     h.findCalls.push(opts);
+    if (h.hangFind) return new Promise(() => undefined); // a websocket that never answers
     if (opts.initialPrivateState) await providers.privateStateProvider.set(opts.privateStateId, opts.initialPrivateState);
     const submit = async (circuit: string, args: unknown[], effect: () => void) => {
       h.calls.push({ circuit, args });
@@ -245,6 +247,7 @@ beforeEach(() => {
   h.indexerUrls.length = 0;
   h.findCalls.length = 0;
   h.calls.length = 0;
+  h.hangFind = false;
   h.pdp = {
     queryContractState: vi.fn(async (a: string) => (a === ADDRESS ? { data: fakeLedger(chain) } : null)),
     contractStateObservable: () => of({ data: fakeLedger(chain) }),
@@ -371,6 +374,23 @@ describe('join a deployed group by address', () => {
     const p = join(s, 'secretary', 0, { address: 'cd'.repeat(32) });
     expect(await code(p)).toBe('contract-not-found');
     expect(h.findCalls).toHaveLength(0);
+  });
+
+  it('an indexer subscription that never answers ends in no-indexer, not a join that spins forever (found on Preprod with Lace)', async () => {
+    makeLace();
+    const s = await LiveSession.connect('preprod', 50);
+    h.hangFind = true;
+    vi.useFakeTimers();
+    try {
+      const p = join(s);
+      const result = code(p);
+      await vi.advanceTimersByTimeAsync(90_000);
+      expect(await result).toBe('no-indexer');
+      await expect(p).rejects.toThrow('Blockfrost Preprod project ID');
+      expect(s.joined).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('malformed address or secrets: bad-input before any network call', async () => {
