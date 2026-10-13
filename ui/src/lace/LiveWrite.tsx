@@ -14,7 +14,8 @@ type Busy = null | 'join' | 'record' | 'open' | 'stamp' | 'prove' | 'vote' | 'su
 
 const defaultZk = () => new URL('zk/', location.href.split('#')[0]).href;
 const msgOf = (e: unknown) => {
-  const m = e instanceof Error ? e.message : String(e);
+  // WebCrypto failures (a DOMException such as OperationError) carry an empty message: never show a blank error
+  const m = (e instanceof Error ? e.message : String(e)) || `Something went wrong (${(e as { name?: string })?.name ?? 'unknown error'}).`;
   // circuit asserts come back inside Midnight.js errors; show the book's own words
   const a = /(Not enough shares|Sunset has happened[^"]*|Already sunset|The vendor is still[^"]*|The maintainer is still sending heartbeats|You are not the member in this slot|This slot already voted for that candidate|No member in this slot|Wrong group secret|Passbook does not match the ledger|Repayment is larger than the loan|failed assert[^"]*)/.exec(m);
   return a && !(e as { code?: string })?.code ? `Refused by the book: ${a[1].replace(/^failed assert:?\s*/i, '').replace(/\.$/, '')}.` : m;

@@ -64,6 +64,9 @@ const hex32 = (h: string, what: string): Uint8Array => {
 const toHex = (b: Uint8Array) => Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
 const same = (a: Uint8Array, b: Uint8Array) => a.length === b.length && a.every((x, i) => x === b[i]);
 
+const wrongLock = (e: unknown): boolean =>
+  (e as { name?: string })?.name === 'OperationError' || /Salt mismatch|different password/i.test((e as Error)?.message ?? '');
+
 export const normaliseAddress = (a: string): string => {
   const s = a.trim().replace(/^0x/i, '');
   if (!/^[0-9a-f]{64,70}$/i.test(s)) throw new LiveError('bad-input', 'That does not look like a contract address (hex). Paste the address printed by the deploy script.');
@@ -195,7 +198,21 @@ export class LiveSession {
     this.providers = providers;
     this.providersFor = builtFor;
 
-    const api = await UndyingAPI.join(providers, o.zkConfigBaseUrl, address as never, createPrivateState(mySecret, groupSecret));
+    let api: UndyingAPI;
+    try {
+      api = await UndyingAPI.join(providers, o.zkConfigBaseUrl, address as never, createPrivateState(mySecret, groupSecret));
+    } catch (e) {
+      // The passbook store in this browser is encrypted with the lock chosen the first time; AES-GCM
+      // refuses any other with an OperationError whose message is empty (found on Preprod with Lace).
+      if (wrongLock(e)) {
+        throw new LiveError(
+          'bad-input',
+          'This browser already keeps a passbook locked with a different passbook lock. Type the lock you chose the first time. If it is forgotten, clear this site\'s data in the browser settings, join again with a new lock, and keep your latest stamp from the secretary.',
+          { cause: e },
+        );
+      }
+      throw e;
+    }
     const L = await api.currentLedger();
     // Check the secrets against the public keys on the book before any proof is spent on them.
     if (!same(roleKey(DOMAINS.group, groupSecret), L.groupKeyTag)) {

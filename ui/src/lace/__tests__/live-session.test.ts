@@ -89,6 +89,7 @@ const h = vi.hoisted(() => ({
   findCalls: [] as Record<string, unknown>[],
   calls: [] as { circuit: string; args: unknown[] }[],
   hangFind: false,
+  locks: new Map<string, string>(),
 }));
 
 vi.mock('@undying-ledger/contract', async (orig) => {
@@ -120,8 +121,12 @@ vi.mock('@midnight-ntwrk/midnight-js-indexer-public-data-provider', () => ({
   },
 }));
 vi.mock('@midnight-ntwrk/midnight-js-level-private-state-provider', () => ({
-  levelPrivateStateProvider: (cfg: { accountId: string }) => {
+  levelPrivateStateProvider: (cfg: { accountId: string; privateStoragePasswordProvider: () => string }) => {
     h.levelCfg.push(cfg);
+    // like the real store: encrypted with the first lock used for this account; any other fails to decrypt
+    const lock = cfg.privateStoragePasswordProvider();
+    if (!h.locks.has(cfg.accountId)) h.locks.set(cfg.accountId, lock);
+    const wrong = h.locks.get(cfg.accountId) !== lock;
     let addr = '';
     const scoped = () => {
       if (!h.stores.has(addr)) h.stores.set(addr, new Map());
@@ -129,7 +134,10 @@ vi.mock('@midnight-ntwrk/midnight-js-level-private-state-provider', () => ({
     };
     return {
       setContractAddress: (a: string) => (addr = a),
-      get: async (k: string) => scoped().get(k) ?? null,
+      get: async (k: string) => {
+        if (wrong) throw Object.assign(new Error(''), { name: 'OperationError' });
+        return scoped().get(k) ?? null;
+      },
       set: async (k: string, v: unknown) => void scoped().set(k, v),
       remove: async (k: string) => void scoped().delete(k),
       clear: async () => scoped().clear(),
@@ -248,6 +256,7 @@ beforeEach(() => {
   h.findCalls.length = 0;
   h.calls.length = 0;
   h.hangFind = false;
+  h.locks.clear();
   h.pdp = {
     queryContractState: vi.fn(async (a: string) => (a === ADDRESS ? { data: fakeLedger(chain) } : null)),
     contractStateObservable: () => of({ data: fakeLedger(chain) }),
@@ -414,13 +423,14 @@ describe('join a deployed group by address', () => {
   it('a new passbook lock after a failed join rebuilds the providers with it (found on Preprod with Lace)', async () => {
     makeLace();
     const s = await LiveSession.connect('preprod', 50);
-    await expect(join(s, 'secretary', 0, { groupSecretHex: hex(bytes(99)) })).rejects.toThrow('group secret does not belong');
+    await expect(join(s, 'secretary', 0, { groupSecretHex: hex(bytes(99)), passphrase: 'Tin-Box-Lock-2026!' })).rejects.toThrow('group secret does not belong');
+    await expect(join(s, 'secretary', 0, { passphrase: 'Kpalsi-Group-2026!x' })).rejects.toThrow('different passbook lock');
     await join(s, 'secretary', 0, { passphrase: 'Tin-Box-Lock-2026!' });
     const last = h.levelCfg.at(-1) as { privateStoragePasswordProvider: () => string };
-    expect(h.levelCfg).toHaveLength(2);
+    expect(h.levelCfg).toHaveLength(3);
     expect(last.privateStoragePasswordProvider()).toBe('Tin-Box-Lock-2026!');
     await join(s, 'member', 0, { passphrase: 'Tin-Box-Lock-2026!' });
-    expect(h.levelCfg).toHaveLength(2);
+    expect(h.levelCfg).toHaveLength(3);
   });
 
   it('secrets that are not this group’s are caught against the public keys', async () => {
