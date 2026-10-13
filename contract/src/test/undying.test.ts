@@ -106,7 +106,7 @@ describe('Undying Ledger: create group', () => {
     expect(L.graceSeconds).toBe(GRACE);
     expect(L.feeKeyEpoch).toBe(1n);
     expect(L.memberKeys.size()).toBe(5n);
-    expect(L.passbooks.size()).toBe(30n); // all 30 slots pre-committed to zero
+    expect(L.passbooks.size()).toBe(5n); // one page of 5 slots pre-committed to zero
     expect(L.memberKeys.lookup(0n)).toEqual(roleKey(DOMAINS.member, setup.memberSecrets[0]));
     expect(L.secretaryKey).not.toEqual(setup.secretarySecret);
   });
@@ -114,7 +114,7 @@ describe('Undying Ledger: create group', () => {
   it('every empty passbook commitment is different (salts are per slot)', () => {
     const { sim } = makeWorld(5);
     const commits = [...sim.ledger().passbooks].map(([, c]) => c);
-    expect(new Set(commits).size).toBe(30);
+    expect(new Set(commits).size).toBe(5);
   });
 });
 
@@ -196,6 +196,20 @@ describe('Undying Ledger: record a meeting', () => {
     expect(r.stamps[6].passbook).toEqual({ shares: 3n, socialFund: 0n, loanOutstanding: 1000n });
     expect(w7.sim.ledger().meetings).toBe(1n); // two txs, one meeting
     for (const s of r.stamps) expect(w7.sim.verifyStamp(w7.setup.groupSecret, s)).toBe(true);
+  });
+
+  it('a sixth member opens a new page of five empty passbooks, and the meeting spans both pages', () => {
+    const w = makeWorld(5);
+    expect(w.sim.ledger().passbooks.size()).toBe(5n);
+    const sixth = randomBytes(32);
+    w.sim.addMember(w.secretary, sixth);
+    expect(w.sim.ledger().passbooks.size()).toBe(10n);
+    w.sim.addMember(w.secretary, randomBytes(32)); // same page: nothing new to commit
+    expect(w.sim.ledger().passbooks.size()).toBe(10n);
+    const r = w.sim.recordMeeting(w.secretary, [E(1), E(1), E(1), E(1), E(1), E(4)]);
+    expect(r.stamps).toHaveLength(7);
+    expect(r.stamps[5].passbook.shares).toBe(4n);
+    expect(w.sim.verifyStamp(w.setup.groupSecret, r.stamps[5])).toBe(true);
   });
 
   it('handles a full 30-member group across six pages', () => {

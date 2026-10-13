@@ -2,7 +2,7 @@
 // Undying Ledger, "the cash box". Six beats of the demo story, all driven by the real compiled
 // Compact circuits through DemoEngine (compact-runtime in this browser). Only the presentation
 // is new; engine.ts, fees.ts and the contract are the same logic the tests exercise.
-import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { DemoEngine } from './demo/engine';
 import { RM } from './a2/motion';
 import { push } from './box/motion';
@@ -38,19 +38,69 @@ const BEATS: { C: (p: BeatProps) => React.ReactElement; world: string }[] = [
   { C: ProveBeat, world: 'w-saf' },
 ];
 
-function useEngine(): DemoEngine {
-  const engine = useMemo(() => {
-    const e = new DemoEngine();
-    e.seedHistory();
-    return e;
-  }, []);
-  useSyncExternalStore(engine.subscribe, engine.getVersion);
+const noSub = () => () => undefined;
+const zero = () => 0;
+// a macrotask, so the browser can paint and take taps between meetings
+const breathe = () => new Promise<void>((r) => setTimeout(r, 0));
+
+/**
+ * The demo book, built after the first paint: deploy, then the 11 earlier meetings one per task
+ * through the real circuits. On a cheap phone (6x slower CPU) doing it all at once froze the page
+ * for about 10 s before anything showed; this way the skeleton shows at once.
+ */
+function useEngine(): { engine: DemoEngine | null; seeded: number } {
+  const [engine, setEngine] = useState<DemoEngine | null>(null);
+  const [seeded, setSeeded] = useState(0);
   useEffect(() => {
+    let gone = false;
+    (async () => {
+      await breathe();
+      if (gone) return;
+      const e = new DemoEngine();
+      await e.seedHistoryInSteps(breathe, (done) => !gone && setSeeded(done));
+      if (!gone) setEngine(e);
+    })();
+    return () => {
+      gone = true;
+    };
+  }, []);
+  useSyncExternalStore(engine?.subscribe ?? noSub, engine?.getVersion ?? zero);
+  useEffect(() => {
+    if (!engine) return;
     // the demo clock: one real second is one second of block time; the vendor's server heartbeats while it is online
     const id = setInterval(() => engine.tick(1), 1000);
     return () => clearInterval(id);
   }, [engine]);
-  return engine;
+  return { engine, seeded };
+}
+
+/** What shows while the book is being built: the first screen's shape, and how far along it is. */
+function Opening({ seeded }: { seeded: number }) {
+  return (
+    <section className="beat w-green" data-testid="opening" aria-busy="true" aria-label="Opening the group’s book">
+      <div className="screen">
+        <header className="top">
+          <div>
+            <div className="who">
+              <b>Fuseina</b>, secretary
+            </div>
+            <div className="where">Kpalsi Women’s Group</div>
+          </div>
+        </header>
+        <h1 className="h1">Meeting 12</h1>
+        <div className="proving on" role="status">
+          <div className="row">
+            <span>Opening the group’s book</span>
+            <b className="num">{seeded} of 11</b>
+          </div>
+          <span className="skel" style={{ width: '90%', height: 64 }} />
+          <span className="skel" style={{ width: '70%' }} />
+          <span className="skel" style={{ width: '82%' }} />
+          <p className="note">Replaying the 11 earlier meetings through the real circuits on this phone.</p>
+        </div>
+      </div>
+    </section>
+  );
 }
 
 function useHashRoute(): string {
@@ -64,7 +114,7 @@ function useHashRoute(): string {
 }
 
 export default function App() {
-  const e = useEngine();
+  const { engine: e, seeded } = useEngine();
   const route = useHashRoute();
   const [cur, setCur] = useState(0);
   const [prev, setPrev] = useState<number | null>(null);
@@ -129,7 +179,7 @@ export default function App() {
     route === 'terms' || route === 'privacy' ? (
       <LegalPage which={route} />
     ) : route === 'fee-key' ? (
-      <FeeKeyPage e={e} />
+      e ? <FeeKeyPage e={e} /> : <Opening seeded={seeded} />
     ) : route === 'live' ? (
       <Suspense fallback={<p className="boot">Opening the live register…</p>}>
         <LivePage />
@@ -139,8 +189,9 @@ export default function App() {
   return (
     <div id="app">
       <div id="live" className="vh" aria-live="polite" ref={live} />
-      <div hidden={!!page}>
-        {BEATS.map(({ C, world }, i) => (
+      {!e && !page && <Opening seeded={seeded} />}
+      <div hidden={!!page || !e}>
+        {e && BEATS.map(({ C, world }, i) => (
           <section
             key={i}
             className={`beat ${world}`}

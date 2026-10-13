@@ -217,6 +217,23 @@ export class DemoEngine {
   /** Replays the group's first 11 meetings so the demo opens at meeting #12. */
   seedHistory(): void {
     for (const lines of HISTORY) this.recordMeeting(lines, true);
+    this.finishSeed();
+  }
+
+  /**
+   * The same replay, one meeting per task, so a slow phone paints first and never freezes for
+   * long. `pause` yields to the browser between meetings; `progress` gets meetings done so far.
+   */
+  async seedHistoryInSteps(pause: () => Promise<void>, progress?: (done: number, of: number) => void): Promise<void> {
+    for (let i = 0; i < HISTORY.length; i++) {
+      this.recordMeeting(HISTORY[i], true);
+      progress?.(i + 1, HISTORY.length);
+      await pause();
+    }
+    this.finishSeed();
+  }
+
+  private finishSeed(): void {
     this.log.length = 0;
     this.say('Group', `Kpalsi Women’s Group book loaded: ${HISTORY_MEETINGS} meetings, ${this.members.length} members.`, 'info');
     this.changed();

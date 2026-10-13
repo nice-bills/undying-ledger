@@ -154,15 +154,29 @@ constructor(
   phase = Phase.ACTIVE;
 
   const gs = checkedGroupSecret();
-  const zero = Passbook { shares: 0, socialFund: 0, loanOutstanding: 0 };
+  // Commit empty passbooks a page (5 slots) at a time, only for the pages the members fill:
+  // committing all 30 slots up front made the deploy too big for a Preprod block.
+  // addMember commits the next page when a page fills up.
   for (const i of 0..30) {
     const slot = i as Uint<8>;
     if (slot < memberCount) {
       memberKeys.insert(slot, disclose(initialMembers[i]));
     }
-    passbookVersion.insert(slot, 0);
-    passbooks.insert(slot, disclose(passbookCommitment(zero, gs, slot, 0)));
+    if (slot < pageEnd(memberCount)) {
+      commitEmptyPassbook(gs, slot);
+    }
   }
+}
+
+// First slot after the last page that holds a member (a group of 7 uses slots 0 to 9).
+pure circuit pageEnd(count: Uint<8>): Uint<8> {
+  return count <= 5 ? 5 : count <= 10 ? 10 : count <= 15 ? 15 : count <= 20 ? 20 : count <= 25 ? 25 : 30;
+}
+
+circuit commitEmptyPassbook(gs: Bytes<32>, slot: Uint<8>): [] {
+  const zero = Passbook { shares: 0, socialFund: 0, loanOutstanding: 0 };
+  passbookVersion.insert(disclose(slot), 0);
+  passbooks.insert(disclose(slot), disclose(passbookCommitment(zero, gs, slot, 0)));
 }
 
 // ---------------------------------------------------------------- 1. record a meeting
@@ -216,7 +230,15 @@ export circuit attestSavings(slot: Uint<8>, minShares: Uint<32>, nonce: Bytes<32
 export circuit addMember(memberKey: Bytes<32>): [] {
   requireSecretary();
   assert(memberCount < 30, "Group is full");
-  memberKeys.insert(memberCount, disclose(memberKey));
+  const slot = memberCount;
+  if (!passbooks.member(slot)) {
+    // the new member starts a page: commit its five empty passbooks
+    const gs = checkedGroupSecret();
+    for (const j of 0..5) {
+      commitEmptyPassbook(gs, (slot + j) as Uint<8>);
+    }
+  }
+  memberKeys.insert(slot, disclose(memberKey));
   memberCount = (memberCount + 1) as Uint<8>;
 }
 
