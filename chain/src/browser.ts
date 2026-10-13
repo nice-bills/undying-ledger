@@ -171,7 +171,8 @@ export function checkPassphrase(passphrase: string): void {
   try {
     validatePassword(passphrase);
   } catch (e) {
-    throw new LiveError('bad-input', `Choose a stronger passbook lock: ${reasonOf(e)}.`, { cause: e });
+    // PasswordValidationError's `reason` is a code (insufficient_classes); its message is the readable rule.
+    throw new LiveError('bad-input', `Choose a stronger passbook lock. ${(e as Error).message}.`, { cause: e });
   }
 }
 

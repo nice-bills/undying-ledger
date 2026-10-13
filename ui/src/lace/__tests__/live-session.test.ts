@@ -386,7 +386,7 @@ describe('join a deployed group by address', () => {
     const s = await LiveSession.connect('preprod', 50);
     const p = join(s, 'secretary', 0, { passphrase: 'undyingledgerlock' });
     expect(await code(p)).toBe('bad-input');
-    await expect(join(s, 'secretary', 0, { passphrase: 'undyingledgerlock' })).rejects.toThrow('stronger passbook lock');
+    await expect(join(s, 'secretary', 0, { passphrase: 'undyingledgerlock' })).rejects.toThrow(/stronger passbook lock\. Password must contain at least 3 of/);
     expect(h.levelCfg).toHaveLength(0);
     expect(h.indexerUrls).toHaveLength(0);
   });
