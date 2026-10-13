@@ -109,6 +109,24 @@ export default function LivePage() {
     }
   };
 
+  // No wallet: prove on this machine's proof server, bind with a burner key, let the relay pay.
+  const noWallet = async () => {
+    if (checking) return;
+    setChecking(true);
+    setLaceErr(false);
+    try {
+      const { LiveSession } = await import('./live-session');
+      const s = LiveSession.noWallet();
+      setLace(`No wallet. Proofs on ${s.setup.proverUri} (this machine); each call is bound with a throwaway key that holds nothing, and the group fee-key relay pays. Needs the Blockfrost ID above and the relay URL below.`);
+      setSession(s);
+    } catch (e) {
+      setLaceErr(true);
+      setLace(redact((e as Error).message));
+    } finally {
+      setChecking(false);
+    }
+  };
+
   const read = async () => {
     const a = address.trim().replace(/^0x/, '');
     if (!/^[0-9a-f]{64,70}$/i.test(a)) {
@@ -165,7 +183,7 @@ export default function LivePage() {
         <h2 className="disp" tabIndex={-1} ref={h} style={{ fontSize: 40 }}>
           The public register
         </h2>
-        <p className="lede">What anyone can read about a deployed group, no wallet needed. With Lace, members act on it.</p>
+        <p className="lede">What anyone can read about a deployed group, no wallet needed. Members act on it with Lace, or with no wallet at all through the group fee-key relay.</p>
         <PreprodRecord />
         <div className="prose">
           <label className="label" htmlFor="addr">
@@ -263,9 +281,14 @@ export default function LivePage() {
         </p>
         <div style={{ height: 10 }} />
         {!session && (
-          <button className="btn ghost" type="button" onClick={connect} disabled={checking}>
-            {checking ? 'Checking Lace' : 'Check my Lace setup'}
-          </button>
+          <div className="pair">
+            <button className="btn ghost" type="button" onClick={connect} disabled={checking}>
+              {checking ? 'Checking Lace' : 'Check my Lace setup'}
+            </button>
+            <button className="btn ghost" type="button" onClick={noWallet} disabled={checking} data-testid="no-wallet">
+              Use without a wallet
+            </button>
+          </div>
         )}
         {checking && (
           <div className="proving on" role="status" data-testid="lace-checking">

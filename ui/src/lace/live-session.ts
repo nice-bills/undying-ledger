@@ -14,9 +14,12 @@ import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
 import { createPrivateState, DOMAINS, Phase, roleKey, type Entry, type Ledger } from '@undying-ledger/contract';
 import {
   browserPrivateStateProvider,
+  buildBurnerProviders,
   buildProviders,
   checkLaceSetup,
   connectToWallet,
+  isLocalProver,
+  LOCAL_PROVER,
   type FeeMode,
   type LaceSetup,
   type Stage,
@@ -29,7 +32,12 @@ export { LiveError, isLiveError } from '@undying-ledger/chain/src/errors';
 export type { Stage } from '@undying-ledger/chain/src/browser';
 
 export const NETWORK = 'preprod';
+export const MAX_SLOT = 29; // groups of up to 30
 export type Role = 'secretary' | 'member';
+/** Where the session gets its keys: Lace, or no wallet at all (a burner key and the relay). */
+export type Source = { kind: 'lace'; connected: ConnectedAPI } | { kind: 'burner' };
+/** What the page shows about the prover. Lace's configuration is present only with Lace. */
+export type Setup = Omit<LaceSetup, 'config'> & { config?: LaceSetup['config'] };
 
 export type AttachOpts = {
   address: string;
@@ -76,8 +84,8 @@ export class LiveSession {
   private me: { role: Role; slot: number; groupSecret: Uint8Array } | undefined;
 
   private constructor(
-    readonly connected: ConnectedAPI,
-    readonly setup: LaceSetup,
+    readonly source: Source,
+    readonly setup: Setup,
   ) {}
 
   /** Find Lace, connect to Preprod, and check its network and prover. Throws LiveError. */
@@ -85,7 +93,27 @@ export class LiveSession {
     const connected = await connectToWallet(networkId, waitMs);
     const setup = await checkLaceSetup(connected, networkId);
     setNetworkId(networkId);
-    return new LiveSession(connected, setup);
+    return new LiveSession({ kind: 'lace', connected }, setup);
+  }
+
+  /**
+   * No wallet: proofs on this machine's proof server, a burner key binds each call, and the group
+   * fee-key relay pays. The member installs nothing and holds no tokens.
+   */
+  static noWallet(proverUri = LOCAL_PROVER, networkId = NETWORK): LiveSession {
+    setNetworkId(networkId);
+    const proverLocal = isLocalProver(proverUri);
+    const warnings = proverLocal ? [] : [`The proof server ${proverUri} is not on this machine. Your passbook would be sent there to be proved. Use ${LOCAL_PROVER}.`];
+    return new LiveSession({ kind: 'burner' }, { proverUri, proverLocal, warnings });
+  }
+
+  get noWalletMode(): boolean {
+    return this.source.kind === 'burner';
+  }
+
+  /** The public key that goes on the book for a secretary secret (for an election). */
+  static secretaryKeyFor(secretHex: string): string {
+    return toHex(roleKey(DOMAINS.secretary, hex32(secretHex, 'The secretary secret')));
   }
 
   onStage(f: ((s: Stage) => void) | undefined) {
@@ -109,6 +137,7 @@ export class LiveSession {
       }
       return { kind: 'group-fee-key', relayUrl };
     }
+    if (this.noWalletMode) throw new LiveError('fee-choice-needed', 'Without a wallet, the group fee-key relay pays every fee. Give its URL above.');
     if (letLacePay) return { kind: 'wallet' };
     throw new LiveError('fee-choice-needed', 'Give the group fee-key relay URL, or agree to let Lace pay this fee from your own DUST.');
   }
@@ -129,21 +158,35 @@ export class LiveSession {
     const mySecret = hex32(o.mySecretHex, o.role === 'secretary' ? 'The secretary secret' : 'Your member secret');
     const groupSecret = hex32(o.groupSecretHex, 'The group secret');
     const slot = o.role === 'member' ? Number(o.slot) : 0;
-    if (o.role === 'member' && (!Number.isInteger(slot) || slot < 0 || slot > 9)) throw new LiveError('bad-input', 'Your slot is a whole number from 0 to 9.');
+    if (o.role === 'member' && (!Number.isInteger(slot) || slot < 0 || slot > MAX_SLOT)) throw new LiveError('bad-input', `Your slot is a whole number from 0 to ${MAX_SLOT}.`);
     if (!o.passphrase) throw new LiveError('bad-input', 'Choose a passphrase to lock your passbook on this phone.');
 
-    const shielded = await this.connected.getShieldedAddresses();
-    const providers =
-      this.providers ??
-      (await buildProviders({
-        connected: this.connected,
-        config: this.setup.config,
+    const onStage = (s: Stage) => this.stageListener?.(s);
+    let providers = this.providers;
+    if (!providers && this.source.kind === 'lace') {
+      const shielded = await this.source.connected.getShieldedAddresses();
+      providers = await buildProviders({
+        connected: this.source.connected,
+        config: this.setup.config!,
         zkConfigBaseUrl: o.zkConfigBaseUrl,
         privateStateProvider: browserPrivateStateProvider(shielded.shieldedCoinPublicKey, o.passphrase),
         feeMode: () => this.feeMode(),
         blockfrostProjectId: o.blockfrostProjectId,
-        onStage: (s) => this.stageListener?.(s),
-      }));
+        onStage,
+      });
+    } else if (!providers) {
+      // No wallet address to scope the stored passbook to: use this device's public role key,
+      // so the same secret finds the same passbook after a reload.
+      const account = toHex(roleKey(o.role === 'secretary' ? DOMAINS.secretary : DOMAINS.member, mySecret));
+      providers = buildBurnerProviders({
+        zkConfigBaseUrl: o.zkConfigBaseUrl,
+        proverUri: this.setup.proverUri,
+        blockfrostProjectId: o.blockfrostProjectId,
+        privateStateProvider: browserPrivateStateProvider(`burner-${account}`, o.passphrase),
+        relayUrl: () => this.feeMode().kind === 'group-fee-key' ? this.fee.relayUrl : '',
+        onStage,
+      });
+    }
     this.providers = providers;
 
     const api = await UndyingAPI.join(providers, o.zkConfigBaseUrl, address as never, createPrivateState(mySecret, groupSecret));
@@ -218,6 +261,17 @@ export class LiveSession {
     const slot = this.me.slot;
     const r = await this.run(() => api.attestSavings(BigInt(slot), BigInt(minShares), nonce));
     return { minShares, ref: toHex(nonce).slice(0, 16), txId: (r as { public?: { txId?: string } })?.public?.txId };
+  }
+
+  /** Member: vote for a new secretary key (more than half of all members elects her). */
+  async voteSecretary(candidateKeyHex: string): Promise<{ elected: boolean; txId?: string }> {
+    const api = this.need();
+    if (this.me?.role !== 'member') throw new LiveError('bad-input', 'Join as a member to vote.');
+    const key = hex32(candidateKeyHex, 'The candidate’s secretary key');
+    const slot = this.me.slot;
+    const r = await this.run(() => api.voteSecretary(BigInt(slot), key));
+    const L = await api.currentLedger();
+    return { elected: same(L.secretaryKey, key), txId: (r as { public?: { txId?: string } })?.public?.txId };
   }
 
   /** Anyone: end the vendor's admin powers once the grace period has run out. */

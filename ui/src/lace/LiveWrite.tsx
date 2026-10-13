@@ -10,13 +10,13 @@ import { ZERO_ENTRY, type Entry } from '@undying-ledger/contract';
 import type { GroupView, LiveSession, Role, Stage } from './live-session';
 
 type Opened = { slot: number; shares: number; fund: number; loan: number; matches: boolean; meetings: number };
-type Busy = null | 'join' | 'record' | 'open' | 'stamp' | 'prove' | 'sunset';
+type Busy = null | 'join' | 'record' | 'open' | 'stamp' | 'prove' | 'vote' | 'sunset';
 
 const defaultZk = () => new URL('zk/', location.href.split('#')[0]).href;
 const msgOf = (e: unknown) => {
   const m = e instanceof Error ? e.message : String(e);
   // circuit asserts come back inside Midnight.js errors; show the book's own words
-  const a = /(Not enough shares|Sunset has happened[^"]*|Already sunset|The vendor is still[^"]*|You are not the member in this slot|Wrong group secret|Passbook does not match the ledger|Repayment is larger than the loan|failed assert[^"]*)/.exec(m);
+  const a = /(Not enough shares|Sunset has happened[^"]*|Already sunset|The vendor is still[^"]*|The maintainer is still sending heartbeats|You are not the member in this slot|This slot already voted for that candidate|No member in this slot|Wrong group secret|Passbook does not match the ledger|Repayment is larger than the loan|failed assert[^"]*)/.exec(m);
   return a && !(e as { code?: string })?.code ? `Refused by the book: ${a[1].replace(/^failed assert:?\s*/i, '').replace(/\.$/, '')}.` : m;
 };
 
@@ -40,6 +40,9 @@ export default function LiveWrite({ session, address, blockfrost }: { session: L
   const [opened, setOpened] = useState<Opened | null>(null);
   const [stamp, setStamp] = useState('');
   const [min, setMin] = useState(1);
+  const [candidate, setCandidate] = useState('');
+  const [standing, setStanding] = useState<{ secret: string; key: string } | null>(null);
+  const noWallet = session.noWalletMode;
   const timer = useRef<HTMLElement>(null);
   const prover = session.setup.proverUri;
 
@@ -134,6 +137,21 @@ export default function LiveWrite({ session, address, blockfrost }: { session: L
       return `Proof slip on the book: at least ${r.minShares} shares. Ref. ${r.ref}${r.txId ? `, tx ${r.txId.slice(0, 16)}` : ''}. Your total stays on this phone.`;
     });
 
+  const vote = () =>
+    act('vote', async () => {
+      const r = await session.voteSecretary(candidate);
+      setCandidate('');
+      return r.elected
+        ? `Your vote made the majority: that key is now the group's secretary${r.txId ? ` (tx ${r.txId.slice(0, 16)})` : ''}.`
+        : `Vote on the book${r.txId ? ` (tx ${r.txId.slice(0, 16)})` : ''}. More than half of all members must vote for the same key.`;
+    });
+
+  const stand = async () => {
+    const { LiveSession: S } = await import('./live-session');
+    const secret = Array.from(crypto.getRandomValues(new Uint8Array(32)), (x) => x.toString(16).padStart(2, '0')).join('');
+    setStanding({ secret, key: S.secretaryKeyFor(secret) });
+  };
+
   const sunset = () =>
     act('sunset', async () => {
       const r = await session.sunset();
@@ -148,7 +166,7 @@ export default function LiveWrite({ session, address, blockfrost }: { session: L
 
   const stageLabel: Record<Stage, string> = {
     proving: `Proving on ${prover.replace(/^https?:\/\//, '')}`,
-    balancing: relay ? 'Lace signs, the fee is left for the group key' : 'Lace balances and pays the fee',
+    balancing: noWallet ? 'Binding the call with a throwaway key' : relay ? 'Lace signs, the fee is left for the group key' : 'Lace balances and pays the fee',
     relay: 'The group fee key adds the fee',
     submitting: 'Lace submits to Preprod',
     done: '',
@@ -164,7 +182,7 @@ export default function LiveWrite({ session, address, blockfrost }: { session: L
       </div>
       <span className="skel" style={{ width: '86%' }} />
       <span className="skel" style={{ width: '60%' }} />
-      <p className="note">The proof is made by the prover Lace points at. Nothing private goes to the relay.</p>
+      <p className="note">{noWallet ? 'The proof is made on this machine.' : 'The proof is made by the prover Lace points at.'} Nothing private goes to the relay.</p>
     </div>
   );
 
@@ -193,7 +211,8 @@ export default function LiveWrite({ session, address, blockfrost }: { session: L
           inputMode="url"
           placeholder="http://localhost:3001"
         />
-        {!relay.trim() && (
+        {noWallet && <p className="note" style={{ marginTop: 4 }}>Without a wallet the relay pays every fee, so this is required.</p>}
+        {!relay.trim() && !noWallet && (
           <label className="consent">
             <input type="checkbox" checked={lacePays} onChange={(ev) => setLacePays(ev.target.checked)} data-testid="lace-pays" />
             <span>No relay: let Lace pay each fee from my own DUST.</span>
@@ -226,7 +245,7 @@ export default function LiveWrite({ session, address, blockfrost }: { session: L
                 <label className="label" htmlFor="slot" style={{ display: 'block', marginTop: 10 }}>
                   My slot
                 </label>
-                <input id="slot" className="addr num" style={{ width: 88 }} inputMode="numeric" value={slot} onChange={(ev) => setSlot(ev.target.value.replace(/\D/g, '').slice(0, 1))} />
+                <input id="slot" className="addr num" style={{ width: 88 }} inputMode="numeric" value={slot} onChange={(ev) => setSlot(ev.target.value.replace(/\D/g, '').slice(0, 2))} />
               </>
             )}
             <label className="label" htmlFor="pass" style={{ display: 'block', marginTop: 10 }}>
@@ -303,6 +322,18 @@ export default function LiveWrite({ session, address, blockfrost }: { session: L
                 {busy === 'record' ? 'Recording on Preprod' : `Stamp and record meeting ${group.meetings + 1}`}
               </button>
               {busy === 'record' && provingBlock('record-proving')}
+              <h3 className="disp sub3">Collect a member’s stamp</h3>
+              <p className="note">A newly elected secretary starts with an empty book on her phone. Each member reads out her stamp; the book checks it before it is kept.</p>
+              <div className="prose">
+                <label className="label" htmlFor="sstamp">
+                  Member’s stamp
+                </label>
+                <input id="sstamp" className="addr" value={stamp} onChange={(ev) => setStamp(ev.target.value)} spellCheck={false} autoComplete="off" placeholder="undying-stamp:0:29:4:0" />
+              </div>
+              <div style={{ height: 10 }} />
+              <button className="btn ghost" type="button" onClick={keep} disabled={!!busy || !stamp.trim()}>
+                {busy === 'stamp' ? 'Checking the stamp' : 'Check and keep this stamp'}
+              </button>
               {stamps.length > 0 && (
                 <ol className="stamps" aria-label="Stamps to hand out" data-testid="stamps">
                   {stamps.map((s) => (
@@ -336,6 +367,11 @@ export default function LiveWrite({ session, address, blockfrost }: { session: L
                     <b className="num">{opened.loan}</b>
                   </div>
                 </div>
+              )}
+              {opened?.matches && (
+                <p className="note" data-testid="my-stamp">
+                  Your stamp, for a newly elected secretary: <span className="hash">{`undying-stamp:${opened.slot}:${opened.shares}:${opened.fund}:${opened.loan}`}</span>
+                </p>
               )}
               <div className="prose">
                 <label className="label" htmlFor="stamp">
@@ -373,6 +409,36 @@ export default function LiveWrite({ session, address, blockfrost }: { session: L
                 {busy === 'prove' ? 'Making the proof' : 'Make a proof slip'}
               </button>
               {busy === 'prove' && provingBlock('prove-proving')}
+
+              <h3 className="disp sub3">Elect a new secretary</h3>
+              <p className="note">
+                If the secretary’s phone is lost, members vote. The one standing makes a secretary key on her own phone and reads it out; more than half of all members voting for it makes her the secretary. Works after sunset too.
+              </p>
+              <div className="prose">
+                <label className="label" htmlFor="cand">
+                  Secretary key of the one standing
+                </label>
+                <input id="cand" className="addr" value={candidate} onChange={(ev) => setCandidate(ev.target.value)} spellCheck={false} autoComplete="off" placeholder="64 hex characters" />
+              </div>
+              <div style={{ height: 10 }} />
+              <div className="pair">
+                <button className="btn" type="button" onClick={vote} disabled={!!busy || !candidate.trim()} data-testid="vote">
+                  {busy === 'vote' ? 'Voting' : 'Vote for this secretary'}
+                </button>
+                <button className="btn ghost" type="button" onClick={stand} disabled={!!busy}>
+                  I am standing
+                </button>
+              </div>
+              {busy === 'vote' && provingBlock('vote-proving')}
+              {standing && (
+                <div className="prose" data-testid="standing">
+                  <span className="label">Your secretary key (read this out)</span>
+                  <p className="hash">{standing.key}</p>
+                  <span className="label">Your secretary secret (keep it on this phone only)</span>
+                  <p className="hash">{standing.secret}</p>
+                  <p className="note">Once elected, join as the secretary with this secret and collect each member’s stamp to rebuild the book.</p>
+                </div>
+              )}
             </>
           )}
 

@@ -15,7 +15,8 @@
     "register-dust": "vite-node src/scripts/register-dust.ts",
     "sync-wallets": "vite-node src/scripts/sync-wallets.ts",
     "sunset:preprod": "MIDNIGHT_NETWORK=preprod vite-node src/scripts/sunset.ts",
-    "heartbeat:preprod": "MIDNIGHT_NETWORK=preprod vite-node src/scripts/heartbeat.ts"
+    "heartbeat:preprod": "MIDNIGHT_NETWORK=preprod vite-node src/scripts/heartbeat.ts",
+    "burner:preprod": "MIDNIGHT_NETWORK=preprod vite-node src/scripts/burner-run.ts"
   },
   "dependencies": {
     "@midnight-ntwrk/compact-runtime": "0.16.0",

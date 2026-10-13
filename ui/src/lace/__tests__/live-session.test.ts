@@ -33,6 +33,7 @@ type Chain = {
   passbooks: bigint[];
   versions: bigint[];
   graceOver: boolean;
+  votes: Map<number, string>;
 };
 const bytes = (n: number) => Uint8Array.from({ length: 32 }, (_, i) => (i * 7 + n) & 0xff);
 const hex = (b: Uint8Array) => Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
@@ -51,6 +52,7 @@ const freshChain = (): Chain => ({
   passbooks: MEMBERS.map((_, i) => pureCircuits.passbookCommitment(ZERO_PASSBOOK, GS, BigInt(i), 0n)),
   versions: MEMBERS.map(() => 0n),
   graceOver: false,
+  votes: new Map(),
 });
 const map = <V>(arr: V[]) => ({
   isEmpty: () => arr.length === 0,
@@ -101,7 +103,13 @@ vi.mock('@midnight-ntwrk/midnight-js-fetch-zk-config-provider', () => ({
 vi.mock('@midnight-ntwrk/midnight-js-http-client-proof-provider', () => ({
   httpClientProofProvider: (url: string) => {
     h.proofUrls.push(url);
-    return { proveTx: async (tx: unknown) => ({ ...(tx as object), proved: true, serialize: () => new Uint8Array([1, 2, 3]) }) };
+    return {
+      proveTx: async (tx: unknown) => {
+        const proved: Record<string, unknown> = { ...(tx as object), proved: true, serialize: () => new Uint8Array([1, 2, 3]) };
+        proved.bind = () => ({ ...proved, bound: true });
+        return proved;
+      },
+    };
   },
 }));
 vi.mock('@midnight-ntwrk/midnight-js-indexer-public-data-provider', () => ({
@@ -132,6 +140,7 @@ vi.mock('@midnight-ntwrk/midnight-js-level-private-state-provider', () => ({
   },
 }));
 vi.mock('@midnight-ntwrk/midnight-js-protocol/ledger', () => ({
+  ZswapSecretKeys: { fromSeed: () => ({ coinPublicKey: 'burner-coin', encryptionPublicKey: 'burner-enc', clear: () => undefined }) },
   Transaction: {
     deserialize: (_s: string, _p: string, _b: string, raw: Uint8Array) => ({
       raw,
@@ -175,6 +184,12 @@ vi.mock('@midnight-ntwrk/midnight-js-contracts', () => ({
             });
           }),
         attestSavings: (slot: bigint, min: bigint, nonce: Uint8Array) => submit('attestSavings', [slot, min, nonce], () => undefined),
+        voteSecretary: (slot: bigint, key: Uint8Array) =>
+          submit('voteSecretary', [slot, key], () => {
+            chain.votes.set(Number(slot), hex(key));
+            const n = [...chain.votes.values()].filter((v) => v === hex(key)).length;
+            if (n * 2 > chain.memberKeys.length) chain.secretaryKey = key;
+          }),
         sunset: () =>
           submit('sunset', [], () => {
             if (!chain.graceOver) throw new Error('failed assert: The vendor is still sending heartbeats; wait for the grace period');
@@ -556,5 +571,89 @@ describe('stamps and the relay client', () => {
   it('submitViaGroupFeeKey reports a non-JSON error page by status', async () => {
     fetchMock.mockResolvedValueOnce(new Response('Bad gateway', { status: 502 }));
     await expect(submitViaGroupFeeKey('http://relay.example', { serialize: () => new Uint8Array([1]) } as never)).rejects.toThrow('HTTP 502');
+  });
+});
+
+// ---------------------------------------------------------------- no wallet (burner key)
+
+describe('no wallet: burner key and the group fee-key relay', () => {
+  it('needs a Blockfrost project ID, since there is no Lace to give an indexer', async () => {
+    const s = LiveSession.noWallet();
+    expect(s.noWalletMode).toBe(true);
+    expect(s.setup.proverLocal).toBe(true);
+    expect(await code(join(s, 'member', 0))).toBe('no-indexer');
+  });
+
+  it('proves locally, binds without a wallet and hands the call to the relay; Lace is never touched', async () => {
+    const { connected } = makeLace();
+    relayOk();
+    const s = LiveSession.noWallet();
+    s.setFee('http://localhost:3001', false);
+    await join(s, 'member', 1, { blockfrostProjectId: 'nightpreprodX' });
+    const stages: string[] = [];
+    s.onStage((x) => stages.push(x));
+    const r = await s.proveAtLeast(1);
+    expect(r.txId).toBe('relay-tx-1');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toBe('http://localhost:3001/sponsor');
+    expect(JSON.parse(init.body).tx).toBe('010203');
+    expect(stages).toEqual(['proving', 'balancing', 'relay', 'done']);
+    expect(h.proofUrls).toContain('http://localhost:6300');
+    expect(h.indexerUrls.at(-1)?.[0]).toBe('https://midnight-preprod.blockfrost.io/api/v0?project_id=nightpreprodX');
+    // the stored passbook is scoped to the member's public key, so a reload finds it again
+    expect((h.levelCfg.at(-1) as { accountId: string }).accountId).toBe(`burner-${hex(roleKey(DOMAINS.member, MEMBERS[1]))}`);
+    expect(connected.balanceUnsealedTransaction).not.toHaveBeenCalled();
+    expect(connected.submitTransaction).not.toHaveBeenCalled();
+  });
+
+  it('without a relay URL there is no way to pay: fee-choice-needed, before any proof', async () => {
+    const s = LiveSession.noWallet();
+    s.setFee('', true); // "let Lace pay" means nothing without Lace
+    await join(s, 'member', 0, { blockfrostProjectId: 'nightpreprodX' });
+    expect(await code(s.proveAtLeast(1))).toBe('fee-choice-needed');
+    expect(h.calls).toHaveLength(0);
+  });
+
+  it('warns when the proof server is not on this machine', () => {
+    const s = LiveSession.noWallet('https://prover.example.com');
+    expect(s.setup.proverLocal).toBe(false);
+    expect(s.setup.warnings[0]).toContain('not on this machine');
+  });
+});
+
+describe('members elect a secretary', () => {
+  it('two of three members vote for the same key and it becomes the secretary; the new secretary records', async () => {
+    relayOk();
+    const newSecret = bytes(42);
+    const key = LiveSession.secretaryKeyFor(hex(newSecret));
+    expect(key).toBe(hex(roleKey(DOMAINS.secretary, newSecret)));
+    const a = LiveSession.noWallet();
+    a.setFee('http://localhost:3001', false);
+    await join(a, 'member', 0, { blockfrostProjectId: 'nightpreprodX' });
+    expect((await a.voteSecretary(key)).elected).toBe(false);
+    const b = LiveSession.noWallet();
+    b.setFee('http://localhost:3001', false);
+    await join(b, 'member', 2, { blockfrostProjectId: 'nightpreprodX' });
+    expect((await b.voteSecretary(key)).elected).toBe(true);
+    expect(h.calls.filter((c) => c.circuit === 'voteSecretary').map((c) => c.args[0])).toEqual([0n, 2n]);
+    // the elected secretary joins with her new secret; the old one no longer can
+    const old = LiveSession.noWallet();
+    expect(await code(join(old, 'secretary', 0, { blockfrostProjectId: 'nightpreprodX' }))).toBe('bad-input');
+    const elected = LiveSession.noWallet();
+    elected.setFee('http://localhost:3001', false);
+    await elected.attach({ address: ADDRESS, role: 'secretary', mySecretHex: hex(newSecret), groupSecretHex: hex(GS), passphrase: PASS, zkConfigBaseUrl: 'z/', blockfrostProjectId: 'nightpreprodX' });
+    expect(elected.role).toBe('secretary');
+  });
+
+  it('only a member can vote, with a 32-byte key', async () => {
+    const s = LiveSession.noWallet();
+    s.setFee('http://localhost:3001', false);
+    await join(s, 'secretary', 0, { blockfrostProjectId: 'nightpreprodX' });
+    expect(await code(s.voteSecretary('ab'.repeat(32)))).toBe('bad-input');
+    const m = LiveSession.noWallet();
+    m.setFee('http://localhost:3001', false);
+    await join(m, 'member', 0, { blockfrostProjectId: 'nightpreprodX' });
+    expect(await code(m.voteSecretary('not hex'))).toBe('bad-input');
   });
 });

@@ -39,6 +39,7 @@ import semver from 'semver';
 import type { UndyingPrivateState } from '@undying-ledger/contract';
 import type { PrivateStateId, UndyingCircuitKeys, UndyingProviders } from './common.js';
 import { LiveError, reasonOf } from './errors.js';
+import { burnerWallet } from './burner.js';
 
 export type FeeMode = { kind: 'wallet' } | { kind: 'group-fee-key'; relayUrl: string };
 export type Stage = 'proving' | 'balancing' | 'relay' | 'submitting' | 'done';
@@ -238,6 +239,61 @@ export async function buildProviders(opts: BuildOpts): Promise<UndyingProviders>
           throw new LiveError('lace-refused', `Lace did not submit the call: ${reasonOf(e)}`, { cause: e });
         }
         return tx.identifiers()[0];
+      },
+    },
+  } as UndyingProviders;
+}
+
+export type BurnerOpts = {
+  zkConfigBaseUrl: string;
+  /** The proof server on this machine (http://localhost:6300). */
+  proverUri: string;
+  /** No Lace means no indexer from Lace: a Blockfrost Preprod project ID is required. */
+  blockfrostProjectId?: string;
+  privateStateProvider: PrivateStateProvider<PrivateStateId, UndyingPrivateState>;
+  /** Read on every call; the burner path has no other way to pay. */
+  relayUrl: () => string;
+  onStage?: (s: Stage) => void;
+};
+
+/**
+ * No wallet at all (burner.ts): the call is proved on this machine, bound with a throwaway key
+ * that holds nothing, and POSTed to the group fee-key relay, which adds the fee and submits.
+ * Nothing to install, no tokens, no wallet sync.
+ */
+export function buildBurnerProviders(opts: BurnerOpts): UndyingProviders {
+  const stage = (s: Stage) => opts.onStage?.(s);
+  if (!opts.blockfrostProjectId?.trim()) {
+    throw new LiveError('no-indexer', 'Without a wallet the page needs a Blockfrost Midnight Preprod project ID to read the book. Paste it above.');
+  }
+  const { indexer, indexerWS } = resolveIndexer(undefined, opts.blockfrostProjectId);
+  const keyMaterialProvider = new FetchZkConfigProvider<UndyingCircuitKeys>(opts.zkConfigBaseUrl, fetch.bind(globalThis));
+  const prover = httpClientProofProvider(opts.proverUri, keyMaterialProvider);
+  const burner = burnerWallet();
+  return {
+    privateStateProvider: opts.privateStateProvider,
+    zkConfigProvider: keyMaterialProvider,
+    proofProvider: {
+      proveTx: (tx, cfg) => {
+        stage('proving');
+        return prover.proveTx(tx, cfg);
+      },
+    },
+    publicDataProvider: indexerPublicDataProvider(indexer, indexerWS),
+    walletProvider: {
+      getCoinPublicKey: burner.getCoinPublicKey,
+      getEncryptionPublicKey: burner.getEncryptionPublicKey,
+      balanceTx: async (tx: UnboundTransaction) => {
+        stage('balancing');
+        return burner.balanceTx(tx);
+      },
+    },
+    midnightProvider: {
+      submitTx: async (tx: FinalizedTransaction): Promise<TransactionId> => {
+        const relayUrl = opts.relayUrl();
+        if (!relayUrl) throw new LiveError('fee-choice-needed', 'Without a wallet, the group fee-key relay pays every fee. Give its URL above.');
+        stage('relay');
+        return submitViaGroupFeeKey(relayUrl, tx);
       },
     },
   } as UndyingProviders;
