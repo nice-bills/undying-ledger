@@ -1,0 +1,106 @@
+{
+  "url": "https://nice-bills.github.io/undying-ledger/",
+  "at": "2026-10-13T02:28:40.911Z",
+  "note": "Tap-to-result includes the demo’s minimum on-screen proving time (2.6 s for a meeting, 3.4 s for a proof slip), so values at that floor mean the circuit ran faster than the animation.",
+  "results": [
+    {
+      "profile": "unthrottled",
+      "cpuSlowdown": 1,
+      "network": "none",
+      "steps": {
+        "recordMeeting (meeting 12)": {
+          "tapToResultSeconds": 7.646,
+          "longestFreezeMs": 221
+        },
+        "refused open (husband)": {
+          "tapToResultSeconds": 2.243,
+          "longestFreezeMs": 90
+        },
+        "sunset": {
+          "tapToResultSeconds": 4.094,
+          "longestFreezeMs": 96
+        },
+        "recordMeeting (meeting 13)": {
+          "tapToResultSeconds": 8.917,
+          "longestFreezeMs": 153
+        },
+        "attestSavings (proof slip)": {
+          "tapToResultSeconds": 6.255,
+          "longestFreezeMs": 109
+        }
+      },
+      "firstScreenSeconds": 2.261,
+      "loadedSeconds": 2.262,
+      "loadLongestFreezeMs": 299,
+      "firstPaintSeconds": 0.468,
+      "transferredKB": 769,
+      "pageErrors": []
+    },
+    {
+      "profile": "cheapPhone",
+      "cpuSlowdown": 6,
+      "network": "1638 kbps down, 150 ms RTT",
+      "steps": {
+        "recordMeeting (meeting 12)": {
+          "tapToResultSeconds": 10.763,
+          "longestFreezeMs": 957
+        },
+        "refused open (husband)": {
+          "tapToResultSeconds": 4.539,
+          "longestFreezeMs": 723
+        },
+        "sunset": {
+          "tapToResultSeconds": 6.564,
+          "longestFreezeMs": 689
+        },
+        "recordMeeting (meeting 13)": {
+          "tapToResultSeconds": 12.655,
+          "longestFreezeMs": 1108
+        },
+        "attestSavings (proof slip)": {
+          "tapToResultSeconds": 8.7,
+          "longestFreezeMs": 682
+        }
+      },
+      "firstScreenSeconds": 12.498,
+      "loadedSeconds": 12.498,
+      "loadLongestFreezeMs": 2164,
+      "firstPaintSeconds": 0.876,
+      "transferredKB": 769,
+      "pageErrors": []
+    },
+    {
+      "profile": "cheapPhone3g",
+      "cpuSlowdown": 6,
+      "network": "400 kbps down, 400 ms RTT",
+      "steps": {
+        "recordMeeting (meeting 12)": {
+          "tapToResultSeconds": 11.549,
+          "longestFreezeMs": 964
+        },
+        "refused open (husband)": {
+          "tapToResultSeconds": 3.847,
+          "longestFreezeMs": 578
+        },
+        "sunset": {
+          "tapToResultSeconds": 5.76,
+          "longestFreezeMs": 622
+        },
+        "recordMeeting (meeting 13)": {
+          "tapToResultSeconds": 10.873,
+          "longestFreezeMs": 1027
+        },
+        "attestSavings (proof slip)": {
+          "tapToResultSeconds": 6.804,
+          "longestFreezeMs": 614
+        }
+      },
+      "firstScreenSeconds": 22.427,
+      "loadedSeconds": 22.427,
+      "loadLongestFreezeMs": 2597,
+      "firstPaintSeconds": 1.456,
+      "transferredKB": 769,
+      "pageErrors": []
+    }
+  ]
+}
