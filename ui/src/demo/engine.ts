@@ -136,12 +136,29 @@ export class DemoEngine {
 
   // ------------------------------------------------------------------ derived views
 
+  // The ledger only changes when a transaction succeeds, but the demo clock re-renders every
+  // screen each second. Reading it through the runtime on every render cost about 12% CPU on a
+  // laptop and starved the circuits on a phone 6x slower, so both are cached per transaction.
+  private ledgerAt = -1;
+  private ledgerView: ReturnType<UndyingSimulator['ledger']> | null = null;
+  private L(): ReturnType<UndyingSimulator['ledger']> {
+    const n = this.sim.txs.length;
+    if (n !== this.ledgerAt || !this.ledgerView) {
+      this.ledgerView = this.sim.ledger();
+      this.ledgerAt = n;
+      this.publicAt = -1;
+    }
+    return this.ledgerView;
+  }
+  private publicAt = -1;
+  private publicView: ReturnType<DemoEngine['buildPublicState']> | null = null;
+
   get meetingsRecorded(): number {
-    return Number(this.sim.ledger().meetings);
+    return Number(this.L().meetings);
   }
 
   get phase(): Phase {
-    return this.sim.ledger().phase;
+    return this.L().phase;
   }
 
   get sunsetOpensIn(): number {
@@ -181,7 +198,15 @@ export class DemoEngine {
   }
 
   publicState() {
-    const L = this.sim.ledger();
+    const L = this.L();
+    if (this.publicAt !== this.ledgerAt || !this.publicView) {
+      this.publicView = this.buildPublicState(L);
+      this.publicAt = this.ledgerAt;
+    }
+    return this.publicView;
+  }
+
+  private buildPublicState(L: ReturnType<UndyingSimulator['ledger']>) {
     const slots = [...Array(Number(L.memberCount)).keys()].map((i) => ({
       slot: i,
       commitment: L.passbooks.lookup(BigInt(i)).toString(16).padStart(64, '0'),
@@ -205,7 +230,7 @@ export class DemoEngine {
 
   /** An outsider (or a curious husband) tries to open Ama's slot with a guessed group secret. */
   outsiderTriesToOpen(slot: number): boolean {
-    const L = this.sim.ledger();
+    const L = this.L();
     const version = L.passbookVersion.lookup(BigInt(slot));
     // Even a guess of the exact amount fails without the group secret.
     const guess: Stamp = { slot: BigInt(slot), version, passbook: this.secretary.state.passbooks[String(slot)] ?? ZERO_PASSBOOK };
