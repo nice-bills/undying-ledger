@@ -203,6 +203,27 @@ declined, wrong network, no prover or a remote one, no indexer, contract not fou
 > **Let Lace pay this fee instead**. If it accepts but still adds its own fee, the relay refuses
 > the call rather than add a second fee (written, not yet run).
 
+### 9b. Act on the book with no wallet at all
+
+A call to this contract moves no coins, so a member needs no wallet: the page proves the call on
+the local proof server, binds it with a throwaway key that holds nothing (`chain/src/burner.ts`)
+and sends it to the relay, which adds the fee. Nothing to install but Docker for the proof server.
+
+1. Start the proof server (`scripts/preprod.sh up`) and the relay for the group (step 10).
+2. Open `#/live?contract=<address>&relay=http://localhost:3001`, paste the Blockfrost project ID,
+   tap **Use without a wallet**, then join with a member or secretary secret from the group's JSON.
+3. Members can vote for a new secretary under **Elect a new secretary**; the one standing taps
+   **I am standing** on her own phone and reads out the key.
+
+The same path ran from Node on 13 Oct 2026 against contract v2 (`npm run burner:preprod -w chain`,
+see the README table): a meeting, a proof, sunset, three votes that elected a new secretary, and a
+meeting by her. In a browser it has only been tested with mocks.
+
+```bash
+GROUP_JSON=.preprod/group3.json RELAY_URL=http://localhost:3001 BURNER_OUT=.preprod/burner-run.json \
+MIDNIGHT_NETWORK=preprod npm run burner:preprod -w chain
+```
+
 ### 10. Optional: the group fee-key relay
 
 ```bash

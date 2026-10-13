@@ -18,8 +18,8 @@ Undying Ledger is a private record book for a village savings and loan associati
 
 | Path | What |
 |---|---|
-| `contract/src/undying.compact` | Compact contract with 8 circuits: recordMeeting, attestSavings, addMember, handoverSecretary, adminReplaceSecretary, heartbeat, sunset, rotateFeeKey |
-| `contract/src/test/` | 20 contract tests (simulator) |
+| `contract/src/undying.compact` | Compact contract with 9 circuits: recordMeeting, attestSavings, addMember, handoverSecretary, voteSecretary, adminReplaceSecretary, heartbeat, sunset, rotateFeeKey; up to 30 members |
+| `contract/src/test/` | 25 contract tests (simulator) |
 | `contract/src/managed/` | compactc output (keys/ is gitignored and regenerated with `npm run compact`) |
 | `chain/src/` | Midnight.js 4.1.1 wiring: config.ts (Blockfrost Preprod), api.ts, browser.ts (Lace connect, check and build; `payFees:false` plus the relay), wallet.ts, scripts/deploy.ts, scripts/measure.ts, relay/fee-key-relay.ts |
 | `chain/compose.yml` | proof server (`midnightntwrk/proof-server:8.1.0`) |
@@ -35,7 +35,7 @@ Undying Ledger is a private record book for a village savings and loan associati
 ```bash
 npm ci
 npm run compact      # compactc 0.31.1 (pinned; 0.34+ targets ledger 9 and cannot deploy to Preprod)
-npm test             # 20 contract + 30 ui = 50 passing
+npm test             # 25 contract + 36 ui + 5 relay guard = 66 passing
 npm run typecheck    # contract, ui, chain
 npm run build        # ui/dist -> docs/ (commit docs/ so Pages updates)
 npm run dev          # local; open #/live?fake=1 for the fake joined session
@@ -51,12 +51,19 @@ Pinned versions (Preprod support matrix, 9 Oct 2026): Compact 0.31.1, compact-ru
 - Through the relay, a caller holding 0 DUST before and after: `recordMeeting` `abbb61e7…1becc5` (block 2,950,140) and `attestSavings` `c40214ef…06e320` (block 2,950,145). Fee 1 SPECK each (the key spent 1,001 with the SDK's 1,000 overhead). Proofs 3.9 s and 3.8 s. Full hashes in README, `ui/src/demo/preprod.ts` and `.preprod/` (gitignored).
 - `measure --apply` filled `ui/src/demo/measured.ts` and `preprod.ts`; `#/live` shows the run with explorer links (`preprod.midnightexplorer.com/transactions/<hash>`, `/contracts/<address>`) and no token.
 
+**Contract v2 on Preprod (13 Oct 2026, no member wallet)**
+- v2 = groups of 30 (pages of 5; the constructor commits only filled pages, addMember commits the next page: committing all 30 at deploy hit "Transaction would exhaust the block limits") + `voteSecretary` (one vote per slot per round, more than half of all members elects; works after sunset).
+- Contract `7a89acd2…3c2303`, deploy `1bf5e31a…68b4ce` (block 2,956,697, 300 s grace), secrets in `.preprod/group3.json`. Through the relay with a burner key (`chain/src/burner.ts`: `tx.bind()`, no wallet, no sync): recordMeeting, attestSavings, sunset, 3 votes (elected), recordMeeting by the elected secretary; blocks 2,956,754 to 2,956,788; fees 1 SPECK (one vote reads 0). `npm run burner:preprod -w chain`, output `.preprod/burner-run.json`, shown on `#/live` (`PREPROD_RUN.v2`).
+- Relay spend guard (`chain/src/relay/guard.ts`) ran live: `/health` counted the 7 calls.
+- Cheap phone (`scripts/cheap-phone.mjs`, `media/cheap-phone.json`, against Pages): 6x CPU + slow 4G: first paint 0.9 s, usable 12.5 s, 769 KB; 3G: 1.5 s / 22.4 s.
+
 **Still only tested with mocks**
 - Lace: `payFees:false`, Lace's finalized transaction into the relay, `levelPrivateStateProvider` in a real browser, browser Blockfrost CORS with a valid token. Needs Lace on Preprod with a throwaway wallet; the owner has to do this or drive it.
+- `#/live` "Use without a wallet" in a real browser (burner path ran from Node only): needs a local proof server, a Blockfrost token pasted in the page and a relay reachable from the browser.
 - (`heartbeat` ran on Preprod on 12 Oct: second group `f1c7d8dc…ec3485` (1 h grace, deploy `c0a2ab57…feaf8a`, block 2,955,001), `heartbeat` `4fd7f18c…73d706` (block 2,955,062, 1 SPECK from the vendor's own DUST; the relay does not sponsor admin calls), then a member's `sunset` was refused by the circuit, `npm run heartbeat:preprod -w chain`, secrets in `.preprod/group2.json`. `sunset` ran: `76cadb73…3fd0f9`, block 2,950,326, by a 0-DUST member through the relay, `npm run sunset:preprod -w chain`. The group is in SUNSET; after it, `recordMeeting` `ec0e88f8…57c99a` (block 2,950,410) and `attestSavings` `288b0711…d6fc55` (block 2,950,415) ran through the relay with 0 DUST.)
 
 **Done and verified in the cloud session**
-- 50 unit tests, typecheck, e2e 8 passed / 2 agentic skipped at 390 and 430 (e2e needs Node >= 22.22.3; the container has 22.22.0, so a Node 24 tarball was used).
+- 66 unit tests, typecheck, e2e passed / 2 agentic skipped at 390 and 430 (e2e needs Node >= 22.22.3; the container has 22.22.0, so a Node 24 tarball was used).
 - UI rebuilt as the cash box (owner's choice); launch video `media/launch-wide.mp4` and `-tall.mp4` (54 s, `media/launch/make.sh`, ends on the Preprod record in `#/live`); demo.mp4 and the narrated cut (82 s; narration re-timed to the new beats). All re-rendered after the measurement, so receipts show 1 SPECK.
 - Proving keys ship in `docs/zk/` so `#/live` can prove from Pages.
 
@@ -67,7 +74,7 @@ Pinned versions (Preprod support matrix, 9 Oct 2026): Compact 0.31.1, compact-ru
 - Never use `pkill -f <pattern>` in a tool command: it matches the tool's own shell.
 
 **Next steps, in order**
-1. Lace `payFees:false` on Preprod (owner, in a real browser with Lace and a throwaway wallet): PREPROD.md step 9. Cannot run in the cloud container (no extension, no wallet UI). If Lace refuses `payFees:false`, build the burner key in the member app (Wave 3 roadmap item 4) so the relay balances.
+1. On the owner's laptop: `#/live` "Use without a wallet" against the v2 group (no Lace needed; PREPROD.md step 9b), then Lace `payFees:false` (step 9). If Lace refuses `payFees:false`, the no-wallet path already covers members.
 2. Deck (Google Slides "Undying Ledger - AKINDO Midnight Buildathon", owner's Drive): slides 9, 12, 13 and 14 updated in place on 12 Oct to the Preprod run (1 SPECK fee, 5 calls by a 0-DUST caller, verified vs not-yet-verified split; heartbeat moved to verified). Re-check after the Lace test.
 3. The owner submits on AKINDO personally. **Do not submit, post publicly, or spend money without the owner's explicit yes.** Aim for 17 Oct.
 

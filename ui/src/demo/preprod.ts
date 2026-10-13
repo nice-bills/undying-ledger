@@ -19,6 +19,12 @@ export type PreprodRun = {
   sunset?: { txHash: string; block: number; at: string };
   /** The book keeps working after sunset: a meeting recorded on the same group, no vendor key left. */
   afterSunset?: { recordMeeting: { txHash: string; block: number } };
+  /**
+   * Contract v2 (groups of 30, member vote): every call made with NO member wallet, bound by a
+   * burner key and paid by the group fee-key relay. Ends with three members electing a new
+   * secretary after sunset, who then records a meeting.
+   */
+  v2?: { contract: string; deployTxHash: string; deployBlock: number; at: string; rows: { label: string; txHash: string; block: number; feeSpeck: string; proofSeconds: number }[] };
   /** A second group (1 h grace) where the vendor checked in; a member's sunset was then refused. */
   heartbeat?: { contract: string; deployTxHash: string; txHash: string; block: number; sunsetRefused: string };
 };
@@ -51,6 +57,63 @@ export const PREPROD_RUN: PreprodRun | null = {
   },
   "afterSunset": {
     "recordMeeting": { "txHash": "ec0e88f8c2326b95f326e22ec04286af3ab46ba9302e585cefae2d4d7157c99a", "block": 2950410 }
+  },
+  "v2": {
+    "contract": "7a89acd2f41ee0f0c72cd3278d5e3bb7b96d76f1c663d751beeb8084703c2303",
+    "deployTxHash": "1bf5e31ada871fb21b55c1f2cea7588d1b29e0fc5b6c4759f0e031c15668b4ce",
+    "deployBlock": 2956697,
+    "at": "2026-10-13T02:29:42.626Z",
+    "rows": [
+      {
+        "label": "recordMeeting",
+        "txHash": "60128464e4e6310c1914e0ddb29955dd6cfdf648ee93099c0f0e3fcb203833a2",
+        "block": 2956754,
+        "feeSpeck": "1",
+        "proofSeconds": 3
+      },
+      {
+        "label": "attestSavings",
+        "txHash": "08a24610256b320779c45f2f3b6646c5f316847607ab6be9de7ad272ef60e8af",
+        "block": 2956762,
+        "feeSpeck": "1",
+        "proofSeconds": 4.2
+      },
+      {
+        "label": "sunset",
+        "txHash": "787bc7635db17a0b22f9a57b92737fb3f865b48c0ccfad66035ed7fc3914e15e",
+        "block": 2956767,
+        "feeSpeck": "1",
+        "proofSeconds": 1.1
+      },
+      {
+        "label": "voteSecretary, slot 0",
+        "txHash": "1839560423c9be4cd3af159f0b6e6c1705e93b3f0863005ccaff1a1c15d4f1f0",
+        "block": 2956772,
+        "feeSpeck": "1",
+        "proofSeconds": 1.8
+      },
+      {
+        "label": "voteSecretary, slot 1",
+        "txHash": "3c1fc322ee17220335d87424bb910a9e18d11f30a693c6224b15615b6baba132",
+        "block": 2956778,
+        "feeSpeck": "0",
+        "proofSeconds": 1.6
+      },
+      {
+        "label": "voteSecretary, slot 2: elected",
+        "txHash": "ddaa692e43c1dcc19931450ef6a6d35dfe85b249da8d3e524e2741120d0d859a",
+        "block": 2956783,
+        "feeSpeck": "1",
+        "proofSeconds": 1.3
+      },
+      {
+        "label": "recordMeeting by the elected secretary",
+        "txHash": "34c43f4761d5ce5e9e7efe0d5755fee5450e2024b527c63440d4a066b2369987",
+        "block": 2956788,
+        "feeSpeck": "1",
+        "proofSeconds": 2.1
+      }
+    ]
   },
   "heartbeat": {
     "contract": "f1c7d8dc5a02ae4ce69898db599862bd1c2b79457b4c5db20f5c4b4054ec3485",

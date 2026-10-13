@@ -87,6 +87,44 @@ export function PreprodRecord() {
           )}
         </tbody>
       </table>
+      {r.v2 && (
+        <>
+          <span className="label" style={{ display: 'block', marginTop: 18 }}>
+            Contract v2, no member wallet, {r.v2.at.slice(0, 10)}
+          </span>
+          <p style={{ marginTop: 4 }}>
+            Contract{' '}
+            <a className="textlink" href={contractLink(r.v2.contract)} target="_blank" rel="noreferrer">
+              {short(r.v2.contract)}
+            </a>
+            , up to 30 members. Every call was proved, bound by a throwaway key that holds nothing, and paid by the group fee key. After sunset three of five members elected a new secretary, who rebuilt the book from their stamps and recorded a meeting.
+          </p>
+          <table className="ledger" data-testid="preprod-v2">
+            <thead>
+              <tr>
+                <th scope="col">Call</th>
+                <th scope="col">Transaction</th>
+                <th scope="col" className="r">
+                  Fee
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {r.v2.rows.map((row) => (
+                <tr key={row.txHash}>
+                  <th scope="row">{row.label}</th>
+                  <td>
+                    <a className="textlink" href={txLink(row.txHash)} target="_blank" rel="noreferrer">
+                      {short(row.txHash)}
+                    </a>
+                  </td>
+                  <td className="r num">{row.feeSpeck} SPECK</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
       {r.heartbeat && (
         <p className="note">
           On a second group (

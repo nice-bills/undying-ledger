@@ -26,13 +26,33 @@ A member's call was paid by the **group fee key**: the wallet that signed `recor
 - **Fee:** 1 SPECK per call (10⁻¹⁵ DUST) as the indexer and the explorer report it. The fee key spent 1,001 SPECK per call: the fee plus the wallet SDK's fixed 1,000 SPECK overhead.
 - **Proofs:** 2.9 to 3.9 s (`recordMeeting`) and 3.0 to 3.8 s (`attestSavings`) on the local proof server 8.1.0; about 25 to 30 s from submit to final.
 - **The endowment:** the deployer sent 2,500 tNIGHT to an NGO key, which registered it to the group fee key's DUST address (`register-dust endow`); the key had DUST within minutes.
-- **What did not run:** the member side here was a Node wallet-SDK script, not Lace. Lace with `payFees: false` is still untested (see Known limits).
+- **What did not run:** the member side here was Node (a wallet-SDK script for v1, the burner key for v2), not Lace and not a browser. Lace with `payFees: false` and the browser's no-wallet path are still untested on a network (see Known limits).
 
 ![The six beats of the demo: meeting 12, Ama's passbook, the husband's phone, sunset, meeting 13, the proof slip](media/strip.jpg)
 
 **Try it live:** https://nice-bills.github.io/undying-ledger/ (or serve `docs/` with any static server: `npx serve docs`). The demo runs the **real compiled Compact circuits** in your browser through `@midnight-ntwrk/compact-runtime`. It needs no wallet, no network and no tokens. **Launch video (54 s, sound optional; it ends on the real Preprod record):** [`media/launch-wide.mp4`](media/launch-wide.mp4) (1920x1080) and [`media/launch-tall.mp4`](media/launch-tall.mp4) (1080x1920), rendered from the real built app by `media/launch/make.sh`, with original music synthesized on a 120 BPM grid and sound effects taken from the app's own animation events. An 82-second recording of the built app is in [`media/demo.mp4`](media/demo.mp4); [`media/demo-narrated.mp4`](media/demo-narrated.mp4) is the same cut with a synthetic voice-over and English captions ([`media/demo.srt`](media/demo.srt)).
 
 ---
+
+
+### Contract v2 on Preprod, with no member wallet (13 October 2026)
+
+Groups of 30 and the member vote, deployed as [`7a89acd2…3c2303`](https://preprod.midnightexplorer.com/contracts/7a89acd2f41ee0f0c72cd3278d5e3bb7b96d76f1c663d751beeb8084703c2303). **No member had a wallet:** each call was proved on the local proof server, bound by a burner key (random coin and encryption public keys, never synced or funded; `chain/src/burner.ts`) and paid by the group fee-key relay, whose spend guard counted all seven. Run with `npm run burner:preprod -w chain`.
+
+| Step | Transaction | Block | Fee | Proof |
+|---|---|---|---|---|
+| Deploy, 300 s grace | [`1bf5e31a…68b4ce`](https://preprod.midnightexplorer.com/transactions/1bf5e31ada871fb21b55c1f2cea7588d1b29e0fc5b6c4759f0e031c15668b4ce) | 2,956,697 | | |
+| `recordMeeting` | [`60128464…3833a2`](https://preprod.midnightexplorer.com/transactions/60128464e4e6310c1914e0ddb29955dd6cfdf648ee93099c0f0e3fcb203833a2) | 2,956,754 | 1 SPECK | 3 s |
+| `attestSavings` | [`08a24610…60e8af`](https://preprod.midnightexplorer.com/transactions/08a24610256b320779c45f2f3b6646c5f316847607ab6be9de7ad272ef60e8af) | 2,956,762 | 1 SPECK | 4.2 s |
+| `sunset` | [`787bc763…14e15e`](https://preprod.midnightexplorer.com/transactions/787bc7635db17a0b22f9a57b92737fb3f865b48c0ccfad66035ed7fc3914e15e) | 2,956,767 | 1 SPECK | 1.1 s |
+| `voteSecretary`, slot 0 | [`18395604…d4f1f0`](https://preprod.midnightexplorer.com/transactions/1839560423c9be4cd3af159f0b6e6c1705e93b3f0863005ccaff1a1c15d4f1f0) | 2,956,772 | 1 SPECK | 1.8 s |
+| `voteSecretary`, slot 1 | [`3c1fc322…aba132`](https://preprod.midnightexplorer.com/transactions/3c1fc322ee17220335d87424bb910a9e18d11f30a693c6224b15615b6baba132) | 2,956,778 | 0 SPECK | 1.6 s |
+| `voteSecretary`, slot 2: **elected** | [`ddaa692e…0d859a`](https://preprod.midnightexplorer.com/transactions/ddaa692e43c1dcc19931450ef6a6d35dfe85b249da8d3e524e2741120d0d859a) | 2,956,783 | 1 SPECK | 1.3 s |
+| `recordMeeting` by the elected secretary | [`34c43f47…369987`](https://preprod.midnightexplorer.com/transactions/34c43f4761d5ce5e9e7efe0d5755fee5450e2024b527c63440d4a066b2369987) | 2,956,788 | 1 SPECK | 2.1 s |
+
+- The third vote made 3 of 5, so the candidate's key became the secretary (`recoveryRound` 1). The new secretary checked every member's stamp against the sealed commitments, then recorded meeting 2. The group is in SUNSET: no maintainer could have done this.
+- One vote's fee reads **0 SPECK** on both the indexer and the explorer; the other six read 1 SPECK.
+- Before this deploy, a version that committed all 30 empty passbooks at creation was refused by Preprod ("Transaction would exhaust the block limits"); the contract now commits them a page of five at a time.
 
 ## The problem, with evidence
 
@@ -204,7 +224,7 @@ Done in Wave 2 after the first Preprod run: groups of 30, secretary recovery by 
 
 ## Known limits
 
-- **What ran on Preprod, and what has only been tested with mocks.** On Preprod (12 Oct 2026, see the table at the top): DUST registration, the deploy, the NGO endowment, the fee-key relay, and `recordMeeting`, `attestSavings` and `sunset` signed by a 0-DUST caller and paid by the relay, plus the vendor's `heartbeat` (and the refused early `sunset`) on a second group, all from Node with the wallet SDK. **Not run on a network:** the browser write path on `#/live` (Lace connect, `payFees: false`, Lace's transaction into the relay, browser private state). It is covered by unit tests with a mocked Lace and mocked providers, which prove the wiring and the error paths, not that Lace behaves like the mock. Open questions:
+- **What ran on Preprod, and what has only been tested with mocks.** On Preprod (12 Oct 2026, see the table at the top): DUST registration, the deploy, the NGO endowment, the fee-key relay, and `recordMeeting`, `attestSavings` and `sunset` signed by a 0-DUST caller and paid by the relay, plus the vendor's `heartbeat` (and the refused early `sunset`) on a second group, all from Node with the wallet SDK. On 13 Oct, contract v2 (30 members, member vote) with **no member wallet at all**: the burner key and the relay, from Node, including the election of a new secretary after sunset. **Not run on a network:** the browser write path on `#/live`, both with Lace (connect, `payFees: false`, Lace's transaction into the relay) and without a wallet (the same burner code as the Node run, but in a browser, with browser private state and a browser calling Blockfrost). It is covered by unit tests with a mocked Lace and mocked providers, which prove the wiring and the error paths, not that Lace behaves like the mock. Open questions:
   - Does Lace honour `balanceUnsealedTransaction(tx, { payFees: false })`? The API type has it; wallet behaviour is unconfirmed. If Lace refuses, the page says “Lace would not balance this call without paying the fee itself (payFees: false)” and offers to let Lace pay from the member’s own DUST. If Lace accepts but still adds its own fee, the relay now refuses the call rather than add a second fee (written, not yet run).
   - Will the relay accept what Lace returns? `balanceUnsealedTransaction` gives back a finalized transaction and the relay re-balances it with `balanceFinalizedTransaction` for DUST only. That pairing has not been exercised.
   - Does `levelPrivateStateProvider` (IndexedDB through `browser-level`) work in the Vite build in a real browser? It is bundled and typechecked; it was never opened in a browser here.
