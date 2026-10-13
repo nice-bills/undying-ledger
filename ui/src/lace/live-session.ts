@@ -9,6 +9,7 @@
 // (cached providers, join by address) and api/src/index.ts.
 //
 // NOT RUN AGAINST PREPROD: the build machine had no Lace, no proof server and no tNIGHT.
+import './buffer-shim';
 import type { ConnectedAPI } from '@midnight-ntwrk/dapp-connector-api';
 import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
 import { createPrivateState, DOMAINS, Phase, roleKey, type Entry, type Ledger } from '@undying-ledger/contract';

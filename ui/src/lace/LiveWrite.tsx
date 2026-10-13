@@ -71,6 +71,8 @@ export default function LiveWrite({ session, address, blockfrost }: { session: L
       const m = await f();
       if (m) setOut(m);
     } catch (e) {
+      // the line on screen is for the member; the stack (with the cause Midnight.js wraps) is for whoever debugs
+      console.error(e, (e as { cause?: unknown })?.cause);
       setErr(msgOf(e));
       setErrCode((e as { code?: string })?.code ?? '');
     } finally {
