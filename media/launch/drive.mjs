@@ -11,8 +11,11 @@ const page = await browser.newPage({ viewport: { width: W, height: H }, deviceSc
 const errors = []; page.on('pageerror', (e) => errors.push(e.message));
 await page.goto(`${base}/stage/?layout=${layout}`);
 const app = page.frameLocator('#app');
-await app.getByRole('button', { name: 'Stamp and record meeting 12' }).waitFor();
+// the video opens on the landing; let it load once (it fetches the demo in the background), so
+// the take below replays the landing hero from the cache and the demo opens without a long wait
+await app.getByRole('link', { name: 'Open the demo' }).waitFor();
 await page.evaluate(() => document.fonts.ready);
+await page.waitForTimeout(7000);
 await page.evaluate(() => {
   window.__sfx = [];
   const W = document.getElementById('app').contentWindow;
@@ -22,9 +25,9 @@ await page.evaluate(() => {
     const c = (this.getAttribute && this.getAttribute('class')) || '';
     const d = typeof o === 'number' ? o : o?.duration || 0, delay = (o && o.delay) || 0;
     let kind = null, at = Date.now() + delay;
-    if (c.includes('coin-fly')) { kind = 'tink'; at += d * 0.9; }
+    if (c.includes('coin-fly') || c.includes('lp-coin')) { kind = 'tink'; at += d * 0.9; }
     else if (c.includes('cb-shackle')) { kind = 'click'; at += d; }
-    else if (c.startsWith('seal')) { kind = 'thump'; at += d * 0.5; }
+    else if (c.startsWith('seal') || c.includes('lp-seal')) { kind = 'thump'; at += d * 0.5; }
     else if (c.includes('cb-vendor') && JSON.stringify(k).includes('260px')) { kind = 'drop'; at += d * 0.8; }
     else if (c === 'slip') kind = 'swish';
     if (kind) window.__sfx.push([kind, at / 1000]);
@@ -34,9 +37,31 @@ await page.evaluate(() => {
 const S = (fn, ...a) => page.evaluate(([f, args]) => window.stage[f](...args), [fn, a]);
 const tap = async (loc) => { await page.evaluate(() => window.__sfx.push(['tap', Date.now() / 1000])); await loc.click({ timeout: 8000 }); };
 
-// first frame is the thumbnail: the hook is already on screen
+// first frame is the thumbnail: the hook is already on screen, over the landing
 await S('cap', 'Undying Ledger', 'The grant ends.', 'The book doesn’t.', 'A savings group’s record book on Midnight: no vendor needed, <b>no fees for members</b>, no one reading her balance.', 0);
-await page.waitForTimeout(600);
+// replay the landing so its hero (coins in, locks shut, the receipt) plays inside the take
+await page.evaluate(() => document.getElementById('app').contentWindow.location.reload());
+await app.getByRole('link', { name: 'Open the demo' }).waitFor();
+await page.evaluate(() => {
+  // the reload replaced the frame's window: hook its animations again for the sound effects
+  const W = document.getElementById('app').contentWindow;
+  const orig = W.Element.prototype.animate;
+  if (orig.__hooked) return;
+  W.Element.prototype.animate = function (k, o) {
+    const a = orig.call(this, k, o);
+    const c = (this.getAttribute && this.getAttribute('class')) || '';
+    const d = typeof o === 'number' ? o : o?.duration || 0, delay = (o && o.delay) || 0;
+    let kind = null, at = Date.now() + delay;
+    if (c.includes('coin-fly') || c.includes('lp-coin')) { kind = 'tink'; at += d * 0.9; }
+    else if (c.includes('cb-shackle')) { kind = 'click'; at += d; }
+    else if (c.startsWith('seal') || c.includes('lp-seal')) { kind = 'thump'; at += d * 0.5; }
+    else if (c.includes('cb-vendor') && JSON.stringify(k).includes('260px')) { kind = 'drop'; at += d * 0.8; }
+    else if (c === 'slip') kind = 'swish';
+    if (kind) window.__sfx.push([kind, at / 1000]);
+    return a;
+  };
+  W.Element.prototype.animate.__hooked = true;
+});
 
 const cdp = await page.context().newCDPSession(page);
 const frames = [];
@@ -48,11 +73,20 @@ cdp.on('Page.screencastFrame', async ({ data, metadata, sessionId }) => {
 });
 await cdp.send('Page.startScreencast', { format: 'jpeg', quality: 94, maxWidth: W, maxHeight: H, everyNthFrame: 1 });
 const T0 = Date.now();
-const at = async (t) => { const d = T0 + t * 1000 - Date.now(); if (d > 0) await page.waitForTimeout(d); };
+// the landing takes the first 8 s; the story that used to start at 4 s starts at 8 s
+const OFF = 4;
+const atRaw = async (t) => { const d = T0 + t * 1000 - Date.now(); if (d > 0) await page.waitForTimeout(d); };
+const at = (t) => atRaw(t >= 4 ? t + OFF : t);
 const beat = (sel, n) => `[data-testid=beat-${n}] ${sel}`;
 const scrollBeat = (n, y) => page.evaluate(([n, y]) => document.getElementById('app').contentDocument.querySelector(`[data-testid=beat-${n}]`).scrollTo({ top: y, behavior: 'smooth' }), [n, y]);
 
-// 01 RECORD  (4 s)
+// 00 THE FRONT DOOR: the landing's hero plays (a meeting goes into the box and the receipt prints)
+await app.locator('#lp-receipt').evaluate((el) => new Promise((r) => { const f = () => (el.getAnimations().every((a) => a.playState === 'finished') && getComputedStyle(el).clipPath.includes('0px 0px 0px') ? r() : setTimeout(f, 50)); setTimeout(f, 300); }));
+await atRaw(6.0); await S('callout', '.lp-receipt .lp-r:nth-of-type(2) b', 'The real fee on Preprod');
+await atRaw(7.0); await S('uncall');
+await atRaw(7.3); await tap(app.getByRole('link', { name: 'Open the demo' }));
+await app.getByRole('button', { name: 'Stamp and record meeting 12' }).waitFor({ timeout: 20000 });
+// 01 RECORD  (8 s)
 await at(4);  await S('cap', '01 · Record', 'Count shares', 'into the box.', 'Taps become coins. The <b>recordMeeting</b> circuit seals all five passbooks.', 1);
 await at(4.3); await scrollBeat(0, 300);
 await at(4.8); await S('zoom', beat('[data-testid=m12] .mrow:nth-child(3)', 0), 1.3);
@@ -106,7 +140,7 @@ await at(49); await S('callout', '[data-testid=preprod-record] tbody tr:nth-chil
 await at(50.4); await S('uncall'); await S('zoom', null);
 // END on the product, one line, nothing claimed that is not true today
 await at(51.5); await S('cap', 'Undying Ledger · Built on Midnight', 'Grants end.', 'Savings don’t.', 'This demo runs the contract’s <b>real compiled circuits</b> in your browser.', 0); await S('url', true);
-await at(55);
+await at(55); // 59 s with the landing
 await cdp.send('Page.stopScreencast');
 const sfx = (await page.evaluate(() => window.__sfx)).map(([k, t]) => [k, +(t - frames[0]).toFixed(3)]).filter(([, t]) => t >= 0);
 writeFileSync(`${outDir}/times.json`, JSON.stringify(frames.map((t) => t - frames[0])));

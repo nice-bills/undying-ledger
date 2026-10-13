@@ -3,7 +3,8 @@
 // Compact circuits through DemoEngine (compact-runtime in this browser). Only the presentation
 // is new; engine.ts, fees.ts and the contract are the same logic the tests exercise.
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { DemoEngine } from './demo/engine';
+import type { DemoEngine } from './demo/engine';
+import { bootEngine } from './demo/boot';
 import { RM } from './a2/motion';
 import { push } from './box/motion';
 import { MeetingBeat } from './beats/MeetingBeat';
@@ -40,30 +41,28 @@ const BEATS: { C: (p: BeatProps) => React.ReactElement; world: string }[] = [
 
 const noSub = () => () => undefined;
 const zero = () => 0;
-// a macrotask, so the browser can paint and take taps between meetings
-const breathe = () => new Promise<void>((r) => setTimeout(r, 0));
+
+/** Start building the demo book now (the landing calls this while the visitor reads). */
+export const prewarm = () => void bootEngine();
 
 /**
- * The demo book, built after the first paint: deploy, then the 11 earlier meetings one per task
- * through the real circuits. On a cheap phone (6x slower CPU) doing it all at once froze the page
- * for about 10 s before anything showed; this way the skeleton shows at once.
+ * The demo book (demo/boot.ts): deploy, then the 11 earlier meetings one per task through the real
+ * circuits, after the first paint. If the landing already built it, it is ready at once.
  */
 function useEngine(): { engine: DemoEngine | null; seeded: number } {
-  const [engine, setEngine] = useState<DemoEngine | null>(null);
-  const [seeded, setSeeded] = useState(0);
+  const b = bootEngine();
+  const [engine, setEngine] = useState<DemoEngine | null>(() => (b.done ? b.engine : null));
+  const [seeded, setSeeded] = useState(b.seeded);
   useEffect(() => {
     let gone = false;
-    (async () => {
-      await breathe();
-      if (gone) return;
-      const e = new DemoEngine();
-      await e.seedHistoryInSteps(breathe, (done) => !gone && setSeeded(done));
-      if (!gone) setEngine(e);
-    })();
+    const f = (n: number) => !gone && setSeeded(n);
+    b.listeners.add(f);
+    b.ready.then((e) => !gone && setEngine(e));
     return () => {
       gone = true;
+      b.listeners.delete(f);
     };
-  }, []);
+  }, [b]);
   useSyncExternalStore(engine?.subscribe ?? noSub, engine?.getVersion ?? zero);
   useEffect(() => {
     if (!engine) return;
