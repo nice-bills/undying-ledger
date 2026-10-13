@@ -22,6 +22,12 @@ import CompactStandardLibrary;
 
 // ---------------------------------------------------------------- types
 
+// One vote in a secretary election: which election round, which candidate key.
+export struct Ballot {
+  round: Uint<64>;
+  candidate: Bytes<32>;
+}
+
 export enum Phase { ACTIVE, SUNSET }
 
 // A member's running passbook. Money is in minor currency units (pesewas).
@@ -55,6 +61,9 @@ export ledger phase: Phase;
 export ledger feeKeyEpoch: Counter;                     // which group DUST fee key is current
 export ledger feeKeyTag: Bytes<32>;                     // H of the current fee key's public part
 export ledger attestations: Map<Bytes<32>, Uint<32>>;   // H(nonce) -> proven minimum shares
+export ledger recoveryRound: Counter;                   // bumps each time members elect a secretary
+export ledger recoveryVotes: Map<Uint<8>, Bytes<32>>;   // slot -> ballot id of its current vote
+export ledger recoveryTally: Map<Bytes<32>, Uint<8>>;   // ballot id -> votes for it
 
 // ---------------------------------------------------------------- witnesses
 
@@ -89,6 +98,10 @@ export pure circuit attestationId(nonce: Bytes<32>): Bytes<32> {
   return persistentHash<Vector<2, Bytes<32>>>([pad(32, "undying:attest"), nonce]);
 }
 
+export pure circuit ballotId(round: Uint<64>, candidate: Bytes<32>): Bytes<32> {
+  return persistentHash<Ballot>(Ballot { round: round, candidate: candidate });
+}
+
 // ---------------------------------------------------------------- internal checks
 
 circuit requireSecretary(): [] {
@@ -120,7 +133,7 @@ circuit openPassbook(gs: Bytes<32>, slot: Uint<8>): Passbook {
 // ---------------------------------------------------------------- constructor: create the group
 
 constructor(
-  initialMembers: Vector<10, Bytes<32>>,
+  initialMembers: Vector<30, Bytes<32>>,
   count: Uint<8>,
   secretary: Bytes<32>,
   maintainer: Bytes<32>,
@@ -129,7 +142,7 @@ constructor(
   grace: Uint<64>,
   startTime: Uint<64>
 ) {
-  assert(count <= 10, "At most 10 members in this version");
+  assert(count <= 30, "At most 30 members");
   memberCount = disclose(count);
   secretaryKey = disclose(secretary);
   maintainerKey = disclose(maintainer);
@@ -142,7 +155,7 @@ constructor(
 
   const gs = checkedGroupSecret();
   const zero = Passbook { shares: 0, socialFund: 0, loanOutstanding: 0 };
-  for (const i of 0..10) {
+  for (const i of 0..30) {
     const slot = i as Uint<8>;
     if (slot < memberCount) {
       memberKeys.insert(slot, disclose(initialMembers[i]));
@@ -154,13 +167,15 @@ constructor(
 
 // ---------------------------------------------------------------- 1. record a meeting
 
-// The secretary records one page (5 slots) of the meeting sheet. Page 0 opens a
-// new meeting. EVERY slot on the page is re-committed (zero entries included),
-// so the chain cannot tell who saved, borrowed or repaid.
-export circuit recordMeeting(page: Uint<1>, entries: Vector<5, Entry>): [] {
+// The secretary records one page (5 slots) of the meeting sheet; a group of 30
+// is six pages. Page 0 opens a new meeting. EVERY slot on the page is
+// re-committed (zero entries included), so the chain cannot tell who saved,
+// borrowed or repaid.
+export circuit recordMeeting(page: Uint<3>, entries: Vector<5, Entry>): [] {
   requireSecretary();
   const gs = checkedGroupSecret();
   const p = disclose(page);
+  assert(p <= 5, "A group has at most six pages");
   if (p == 0) {
     meetings.increment(1);
   }
@@ -200,7 +215,7 @@ export circuit attestSavings(slot: Uint<8>, minShares: Uint<32>, nonce: Bytes<32
 
 export circuit addMember(memberKey: Bytes<32>): [] {
   requireSecretary();
-  assert(memberCount < 10, "Group is full");
+  assert(memberCount < 30, "Group is full");
   memberKeys.insert(memberCount, disclose(memberKey));
   memberCount = (memberCount + 1) as Uint<8>;
 }
@@ -217,6 +232,39 @@ export circuit handoverSecretary(newSecretary: Bytes<32>): [] {
 export circuit adminReplaceSecretary(newSecretary: Bytes<32>): [] {
   requireMaintainer();
   secretaryKey = disclose(newSecretary);
+}
+
+// ---------------------------------------------------------------- 5b. members elect a secretary (survives sunset)
+
+// If the secretary's phone is lost after sunset there is no maintainer left to
+// replace her, so members vote, as a VSLA elects its officers. Each member slot
+// has one vote per election round and can change it; a vote decides as soon as
+// more than half of all members back the same candidate key. The new secretary
+// rebuilds the book from members' passbook stamps, which the ledger verifies.
+// Public: which slot voted for which candidate key (slots are pseudonyms).
+export circuit voteSecretary(slot: Uint<8>, candidate: Bytes<32>): [] {
+  const s = disclose(slot);
+  assert(s < memberCount, "No member in this slot");
+  assert(memberKeys.lookup(s) == roleKey(pad(32, "undying:member"), localSecret()),
+         "You are not the member in this slot");
+  const b = ballotId(recoveryRound.read(), disclose(candidate));
+  if (recoveryVotes.member(s)) {
+    const prev = recoveryVotes.lookup(s);
+    assert(prev != b, "This slot already voted for that candidate");
+    if (recoveryTally.member(prev)) {
+      const had = recoveryTally.lookup(prev);
+      if (had > 0) {
+        recoveryTally.insert(prev, (had - 1) as Uint<8>);
+      }
+    }
+  }
+  recoveryVotes.insert(s, b);
+  const votes = (recoveryTally.member(b) ? recoveryTally.lookup(b) + 1 : 1) as Uint<8>;
+  recoveryTally.insert(b, votes);
+  if ((votes as Uint<16>) * 2 > (memberCount as Uint<16>)) {
+    secretaryKey = disclose(candidate);
+    recoveryRound.increment(1);
+  }
 }
 
 // ---------------------------------------------------------------- 6. heartbeat (admin-only)

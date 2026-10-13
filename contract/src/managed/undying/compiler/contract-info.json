@@ -139,6 +139,31 @@
       }
     },
     {
+      "name": "ballotId",
+      "pure": true,
+      "proof": false,
+      "arguments": [
+        {
+          "name": "round",
+          "type": {
+            "type-name": "Uint",
+            "maxval": 18446744073709551615
+          }
+        },
+        {
+          "name": "candidate",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Bytes",
+        "length": 32
+      }
+    },
+    {
       "name": "recordMeeting",
       "pure": false,
       "proof": true,
@@ -147,7 +172,7 @@
           "name": "page",
           "type": {
             "type-name": "Uint",
-            "maxval": 1
+            "maxval": 7
           }
         },
         {
@@ -289,6 +314,32 @@
       }
     },
     {
+      "name": "voteSecretary",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+        {
+          "name": "slot",
+          "type": {
+            "type-name": "Uint",
+            "maxval": 255
+          }
+        },
+        {
+          "name": "candidate",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Tuple",
+        "types": [
+        ]
+      }
+    },
+    {
       "name": "heartbeat",
       "pure": false,
       "proof": true,
@@ -403,7 +454,10 @@
   "ledger": [
     {
       "name": "memberCount",
-      "index": 0,
+      "index": [
+        0,
+        0
+      ],
       "exported": true,
       "storage": "Cell",
       "type": {
@@ -413,7 +467,10 @@
     },
     {
       "name": "memberKeys",
-      "index": 1,
+      "index": [
+        0,
+        1
+      ],
       "exported": true,
       "storage": "Map",
       "key": {
@@ -427,7 +484,10 @@
     },
     {
       "name": "passbooks",
-      "index": 2,
+      "index": [
+        1,
+        0
+      ],
       "exported": true,
       "storage": "Map",
       "key": {
@@ -440,7 +500,10 @@
     },
     {
       "name": "passbookVersion",
-      "index": 3,
+      "index": [
+        1,
+        1
+      ],
       "exported": true,
       "storage": "Map",
       "key": {
@@ -454,7 +517,10 @@
     },
     {
       "name": "secretaryKey",
-      "index": 4,
+      "index": [
+        1,
+        2
+      ],
       "exported": true,
       "storage": "Cell",
       "type": {
@@ -464,7 +530,10 @@
     },
     {
       "name": "maintainerKey",
-      "index": 5,
+      "index": [
+        1,
+        3
+      ],
       "exported": true,
       "storage": "Cell",
       "type": {
@@ -474,7 +543,10 @@
     },
     {
       "name": "groupKeyTag",
-      "index": 6,
+      "index": [
+        1,
+        4
+      ],
       "exported": true,
       "storage": "Cell",
       "type": {
@@ -484,13 +556,19 @@
     },
     {
       "name": "meetings",
-      "index": 7,
+      "index": [
+        1,
+        5
+      ],
       "exported": true,
       "storage": "Counter"
     },
     {
       "name": "lastHeartbeat",
-      "index": 8,
+      "index": [
+        1,
+        6
+      ],
       "exported": true,
       "storage": "Cell",
       "type": {
@@ -500,7 +578,10 @@
     },
     {
       "name": "graceSeconds",
-      "index": 9,
+      "index": [
+        1,
+        7
+      ],
       "exported": true,
       "storage": "Cell",
       "type": {
@@ -510,7 +591,10 @@
     },
     {
       "name": "phase",
-      "index": 10,
+      "index": [
+        1,
+        8
+      ],
       "exported": true,
       "storage": "Cell",
       "type": {
@@ -524,13 +608,19 @@
     },
     {
       "name": "feeKeyEpoch",
-      "index": 11,
+      "index": [
+        1,
+        9
+      ],
       "exported": true,
       "storage": "Counter"
     },
     {
       "name": "feeKeyTag",
-      "index": 12,
+      "index": [
+        1,
+        10
+      ],
       "exported": true,
       "storage": "Cell",
       "type": {
@@ -540,7 +630,10 @@
     },
     {
       "name": "attestations",
-      "index": 13,
+      "index": [
+        1,
+        11
+      ],
       "exported": true,
       "storage": "Map",
       "key": {
@@ -550,6 +643,49 @@
       "value": {
         "type-name": "Uint",
         "maxval": 4294967295
+      }
+    },
+    {
+      "name": "recoveryRound",
+      "index": [
+        1,
+        12
+      ],
+      "exported": true,
+      "storage": "Counter"
+    },
+    {
+      "name": "recoveryVotes",
+      "index": [
+        1,
+        13
+      ],
+      "exported": true,
+      "storage": "Map",
+      "key": {
+        "type-name": "Uint",
+        "maxval": 255
+      },
+      "value": {
+        "type-name": "Bytes",
+        "length": 32
+      }
+    },
+    {
+      "name": "recoveryTally",
+      "index": [
+        1,
+        14
+      ],
+      "exported": true,
+      "storage": "Map",
+      "key": {
+        "type-name": "Bytes",
+        "length": 32
+      },
+      "value": {
+        "type-name": "Uint",
+        "maxval": 255
       }
     }
   ]

@@ -1,5 +1,7 @@
 import type * as __compactRuntime from '@midnight-ntwrk/compact-runtime';
 
+export type Ballot = { round: bigint; candidate: Uint8Array };
+
 export enum Phase { ACTIVE = 0, SUNSET = 1 }
 
 export type Passbook = { shares: bigint;
@@ -34,6 +36,9 @@ export type ImpureCircuits<PS> = {
                     newSecretary_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   adminReplaceSecretary(context: __compactRuntime.CircuitContext<PS>,
                         newSecretary_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
+  voteSecretary(context: __compactRuntime.CircuitContext<PS>,
+                slot_0: bigint,
+                candidate_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   heartbeat(context: __compactRuntime.CircuitContext<PS>, now_0: bigint): __compactRuntime.CircuitResults<PS, []>;
   sunset(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, []>;
   rotateFeeKey(context: __compactRuntime.CircuitContext<PS>,
@@ -54,6 +59,9 @@ export type ProvableCircuits<PS> = {
                     newSecretary_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   adminReplaceSecretary(context: __compactRuntime.CircuitContext<PS>,
                         newSecretary_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
+  voteSecretary(context: __compactRuntime.CircuitContext<PS>,
+                slot_0: bigint,
+                candidate_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   heartbeat(context: __compactRuntime.CircuitContext<PS>, now_0: bigint): __compactRuntime.CircuitResults<PS, []>;
   sunset(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, []>;
   rotateFeeKey(context: __compactRuntime.CircuitContext<PS>,
@@ -68,6 +76,7 @@ export type PureCircuits = {
                      slot_0: bigint,
                      version_0: bigint): bigint;
   attestationId(nonce_0: Uint8Array): Uint8Array;
+  ballotId(round_0: bigint, candidate_0: Uint8Array): Uint8Array;
 }
 
 export type Circuits<PS> = {
@@ -85,6 +94,9 @@ export type Circuits<PS> = {
                      version_0: bigint): __compactRuntime.CircuitResults<PS, bigint>;
   attestationId(context: __compactRuntime.CircuitContext<PS>,
                 nonce_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
+  ballotId(context: __compactRuntime.CircuitContext<PS>,
+           round_0: bigint,
+           candidate_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
   recordMeeting(context: __compactRuntime.CircuitContext<PS>,
                 page_0: bigint,
                 entries_0: Entry[]): __compactRuntime.CircuitResults<PS, []>;
@@ -98,6 +110,9 @@ export type Circuits<PS> = {
                     newSecretary_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   adminReplaceSecretary(context: __compactRuntime.CircuitContext<PS>,
                         newSecretary_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
+  voteSecretary(context: __compactRuntime.CircuitContext<PS>,
+                slot_0: bigint,
+                candidate_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   heartbeat(context: __compactRuntime.CircuitContext<PS>, now_0: bigint): __compactRuntime.CircuitResults<PS, []>;
   sunset(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, []>;
   rotateFeeKey(context: __compactRuntime.CircuitContext<PS>,
@@ -137,6 +152,21 @@ export type Ledger = {
   readonly feeKeyEpoch: bigint;
   readonly feeKeyTag: Uint8Array;
   attestations: {
+    isEmpty(): boolean;
+    size(): bigint;
+    member(key_0: Uint8Array): boolean;
+    lookup(key_0: Uint8Array): bigint;
+    [Symbol.iterator](): Iterator<[Uint8Array, bigint]>
+  };
+  readonly recoveryRound: bigint;
+  recoveryVotes: {
+    isEmpty(): boolean;
+    size(): bigint;
+    member(key_0: bigint): boolean;
+    lookup(key_0: bigint): Uint8Array;
+    [Symbol.iterator](): Iterator<[bigint, Uint8Array]>
+  };
+  recoveryTally: {
     isEmpty(): boolean;
     size(): bigint;
     member(key_0: Uint8Array): boolean;

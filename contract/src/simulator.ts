@@ -27,7 +27,7 @@ import {
 } from './managed/undying/contract/index.js';
 import { type UndyingPrivateState, ZERO_PASSBOOK, createPrivateState, witnesses } from './witnesses.js';
 
-export const MAX_MEMBERS = 10;
+export const MAX_MEMBERS = 30;
 export const PAGE_SIZE = 5;
 
 /** Right-pad an ASCII domain tag to 32 bytes, like Compact's `pad(32, "...")`. */
@@ -239,6 +239,22 @@ export class UndyingSimulator {
 
   sunset(anyone: Device): Device {
     return this.run(anyone, 'sunset', (ctx) => this.contract.impureCircuits.sunset(ctx));
+  }
+
+  /** A member votes for a new secretary (the candidate's secretary secret stays on the candidate's phone). */
+  voteSecretary(member: Device, slot: bigint, candidateSecretarySecret: Uint8Array): Device {
+    const key = roleKey(DOMAINS.secretary, candidateSecretarySecret);
+    return this.run(member, 'voteSecretary', (ctx) => this.contract.impureCircuits.voteSecretary(ctx, slot, key));
+  }
+
+  /**
+   * A newly elected secretary rebuilds the book from members' stamps, each checked against the
+   * ledger, as members read their passbooks aloud at the first meeting with the new secretary.
+   */
+  rebuildFromStamps(secretary: Device, stamps: Stamp[]): Device {
+    let dev = secretary;
+    for (const st of stamps) dev = this.acceptStamp(dev, st);
+    return dev;
   }
 
   rotateFeeKey(secretary: Device, newFeeKeyTag: Uint8Array): Device {

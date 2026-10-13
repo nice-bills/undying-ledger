@@ -17,8 +17,9 @@
 //   GROUP_FEE_KEY_SEED=<64 hex>  GROUP_CONTRACT=<contract address hex>
 //   BLOCKFROST_PROJECT_ID=nightpreprod... MIDNIGHT_NETWORK=preprod MIDNIGHT_PROOF_SERVER=http://127.0.0.1:6300 npm run relay -w chain
 //
-//   GET  /health   -> { status, dust, contract, dustAddress }
+//   GET  /health   -> { status, dust, tank: ok|low|reserve, usage, limits, contract, dustAddress }
 //   POST /sponsor  -> { tx: "<hex FinalizedTransaction, bound, no fee>" } => { success, txId }
+//                     429 with Retry-After when the spend guard (guard.ts) refuses
 
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { makeLogger } from '../logger.js';
@@ -33,13 +34,15 @@ import {
 import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
 import { fromHex, ttlOneHour } from '@midnight-ntwrk/midnight-js-utils';
 import { getConfig } from '../config.js';
+import { GuardRefusal, SpendGuard, limitsFromEnv, tankStatus } from './guard.js';
 import { buildFeeKeyWallet } from '../fee-key-wallet.js';
 import { stateSaverFor } from '../wallet-state.js';
 import { submitWithRetry, syncWallet } from '../wallet.js';
 
 const logger = makeLogger(process.env['LOG_LEVEL'] ?? 'info');
 const MAX_BODY_BYTES = 25 * 1024 * 1024;
-const ALLOWED_ENTRY_POINTS = new Set(['recordMeeting', 'attestSavings', 'addMember', 'handoverSecretary', 'rotateFeeKey', 'sunset']);
+const ALLOWED_ENTRY_POINTS = new Set(['recordMeeting', 'attestSavings', 'addMember', 'handoverSecretary', 'voteSecretary', 'rotateFeeKey', 'sunset']);
+const guard = new SpendGuard(limitsFromEnv(process.env));
 
 const env = (k: string): string => {
   const v = process.env[k];
@@ -66,7 +69,8 @@ const dustBalance = async (): Promise<bigint> => (await facade.waitForSyncedStat
 logger.info(`Group fee key ready. DUST balance: ${await dustBalance()} SPECK`);
 
 // --- policy: only this group's contract, only known circuits -------------------------
-function assertGroupCallOnly(tx: FinalizedTransaction): void {
+function assertGroupCallOnly(tx: FinalizedTransaction): string[] {
+  const circuits: string[] = [];
   const intents = tx.intents;
   if (!intents || intents.size === 0) throw new Error('No contract call in transaction');
   for (const intent of intents.values()) {
@@ -80,13 +84,16 @@ function assertGroupCallOnly(tx: FinalizedTransaction): void {
       if (String(action.address).toLowerCase() !== groupContract) throw new Error('Not this group’s contract');
       const ep = typeof action.entryPoint === 'string' ? action.entryPoint : new TextDecoder().decode(action.entryPoint);
       if (!ALLOWED_ENTRY_POINTS.has(ep)) throw new Error(`Circuit ${ep} is not sponsored`);
+      circuits.push(ep);
     }
   }
+  return circuits;
 }
 
 async function sponsorAndSubmit(hex: string): Promise<string> {
   const userTx = Transaction.deserialize<SignatureEnabled, Proof, Binding>('signature', 'proof', 'binding', fromHex(hex));
-  assertGroupCallOnly(userTx);
+  const circuits = assertGroupCallOnly(userTx);
+  guard.check(circuits, await dustBalance());
   const recipe = await facade.balanceFinalizedTransaction(
     userTx,
     { shieldedSecretKeys: throwawayShielded, dustSecretKey: groupDustKey },
@@ -97,7 +104,11 @@ async function sponsorAndSubmit(hex: string): Promise<string> {
   // Several relays on one key can collide on the same DUST UTXO (DustDoubleSpend, error 196):
   // the loser should simply retry. See README "Honest limitations".
   const txId = await submitWithRetry(facade, finalized, logger as never);
+  guard.record(circuits);
   void stateSaverFor(facade)?.().catch(() => undefined);
+  const left = await dustBalance();
+  const tank = tankStatus(left, guard.limits);
+  if (tank !== 'ok') logger.warn(`Group fee key is ${tank === 'low' ? 'low' : 'down to its meeting reserve'}: ${left} SPECK. Ask the NGO or a supporter to register more NIGHT to ${feeKeyDustAddress}`);
   return txId;
 }
 
@@ -133,7 +144,17 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
     return;
   }
   if (req.method === 'GET' && req.url === '/health') {
-    send(res, 200, { status: 'ok', dust: (await dustBalance()).toString(), contract: groupContract, dustAddress: feeKeyDustAddress });
+    const dust = await dustBalance();
+    const { limits } = guard;
+    send(res, 200, {
+      status: 'ok',
+      dust: dust.toString(),
+      tank: tankStatus(dust, limits),
+      usage: guard.usage(),
+      limits: { perHour: limits.perHour, perDay: limits.perDay, perCircuitPerHour: limits.perCircuitPerHour, reserveSpeck: limits.reserveSpeck.toString(), lowSpeck: limits.lowSpeck.toString() },
+      contract: groupContract,
+      dustAddress: feeKeyDustAddress,
+    });
     return;
   }
   if (req.method === 'POST' && req.url === '/sponsor') {
@@ -145,6 +166,11 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
     try {
       send(res, 200, { success: true, txId: await sponsorAndSubmit(tx) });
     } catch (e) {
+      if (e instanceof GuardRefusal) {
+        if (e.retryAfterSeconds) res.setHeader('retry-after', String(e.retryAfterSeconds));
+        send(res, 429, { success: false, error: e.message, retryAfterSeconds: e.retryAfterSeconds });
+        return;
+      }
       send(res, 422, { success: false, error: (e as Error).message });
     }
     return;

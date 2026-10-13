@@ -213,6 +213,10 @@ export class UndyingAPI {
   handoverSecretary(newKey: Uint8Array) {
     return this.deployed.callTx.handoverSecretary(newKey);
   }
+  /** A member votes for a new secretary key; a majority of members elects her (works after sunset). */
+  voteSecretary(slot: bigint, candidateKey: Uint8Array) {
+    return this.deployed.callTx.voteSecretary(slot, candidateKey);
+  }
   adminReplaceSecretary(newKey: Uint8Array) {
     return this.deployed.callTx.adminReplaceSecretary(newKey);
   }

@@ -11,7 +11,7 @@
   ],
   "scripts": {
     "compact": "npm run compact -w contract",
-    "test": "npm test -w contract && npm test -w ui",
+    "test": "npm test -w contract && npm test -w ui && npm test -w chain",
     "typecheck": "npm run typecheck -w contract && npm run typecheck -w ui && npm run typecheck -w chain",
     "build": "npm run build -w ui && rm -rf docs && cp -r ui/dist docs && node scripts/copy-zk.mjs",
     "dev": "npm run dev -w ui",

@@ -106,7 +106,7 @@ describe('Undying Ledger: create group', () => {
     expect(L.graceSeconds).toBe(GRACE);
     expect(L.feeKeyEpoch).toBe(1n);
     expect(L.memberKeys.size()).toBe(5n);
-    expect(L.passbooks.size()).toBe(10n); // all 10 slots pre-committed to zero
+    expect(L.passbooks.size()).toBe(30n); // all 30 slots pre-committed to zero
     expect(L.memberKeys.lookup(0n)).toEqual(roleKey(DOMAINS.member, setup.memberSecrets[0]));
     expect(L.secretaryKey).not.toEqual(setup.secretarySecret);
   });
@@ -114,7 +114,7 @@ describe('Undying Ledger: create group', () => {
   it('every empty passbook commitment is different (salts are per slot)', () => {
     const { sim } = makeWorld(5);
     const commits = [...sim.ledger().passbooks].map(([, c]) => c);
-    expect(new Set(commits).size).toBe(10);
+    expect(new Set(commits).size).toBe(30);
   });
 });
 
@@ -197,6 +197,17 @@ describe('Undying Ledger: record a meeting', () => {
     expect(w7.sim.ledger().meetings).toBe(1n); // two txs, one meeting
     for (const s of r.stamps) expect(w7.sim.verifyStamp(w7.setup.groupSecret, s)).toBe(true);
   });
+
+  it('handles a full 30-member group across six pages', () => {
+    const w30 = makeWorld(30);
+    const entries = Array.from({ length: 30 }, (_, i) => E(1 + (i % 5)));
+    const r = w30.sim.recordMeeting(w30.secretary, entries);
+    expect(r.stamps).toHaveLength(30);
+    expect(r.stamps[29].passbook.shares).toBe(5n);
+    expect(w30.sim.ledger().meetings).toBe(1n); // six txs, one meeting
+    expect(w30.sim.txs.filter((t) => t.circuit === 'recordMeeting')).toHaveLength(6);
+    for (const s of r.stamps) expect(w30.sim.verifyStamp(w30.setup.groupSecret, s)).toBe(true);
+  });
 });
 
 describe('Undying Ledger: member proves own passbook', () => {
@@ -273,6 +284,66 @@ describe('Undying Ledger: heartbeat and sunset', () => {
   });
 });
 
+describe('Undying Ledger: members elect a secretary', () => {
+  it('after sunset, a majority of members replaces a lost secretary, who rebuilds the book from stamps', () => {
+    const w = makeWorld(5);
+    const r = w.sim.recordMeeting(w.secretary, [E(3), E(2), E(4, 0, 500), E(1), E(2)]);
+    // each member's phone keeps its own stamp
+    const members = w.members.map((m, i) => w.sim.acceptStamp(m, r.stamps[i]));
+    w.sim.advance(GRACE);
+    w.sim.sunset(members[1]);
+    // the secretary's phone is lost; no maintainer exists any more
+    expect(() => w.sim.adminReplaceSecretary(w.maintainer, randomBytes(32))).toThrow(/admin-only paths are closed/);
+    const candidate = randomBytes(32);
+    const before = w.sim.ledger().secretaryKey;
+    w.sim.voteSecretary(members[0], 0n, candidate);
+    w.sim.voteSecretary(members[1], 1n, candidate);
+    expect(w.sim.ledger().secretaryKey).toEqual(before); // 2 of 5 is not a majority
+    w.sim.voteSecretary(members[2], 2n, candidate);
+    expect(w.sim.ledger().secretaryKey).toEqual(roleKey(DOMAINS.secretary, candidate)); // 3 of 5 decides
+    expect(w.sim.ledger().recoveryRound).toBe(1n);
+    // the old phone, if found, no longer works
+    expect(() => w.sim.recordMeeting(w.secretary, [E(1)])).toThrow(/Only the group secretary/);
+    // the new secretary collects members' stamps, each checked against the ledger, and records
+    const fresh = device('elected secretary', candidate, w.setup.groupSecret);
+    const sec = w.sim.rebuildFromStamps(fresh, r.stamps);
+    const r2 = w.sim.recordMeeting(sec, [E(1), E(1), E(0, 0, 0, 500)]);
+    expect(r2.stamps[0].passbook.shares).toBe(4n);
+    expect(r2.stamps[2].passbook.loanOutstanding).toBe(0n);
+    expect(w.sim.ledger().meetings).toBe(2n);
+  });
+
+  it('one vote per slot per round; votes can move; only the slot owner votes', () => {
+    const w = makeWorld(5);
+    const a = randomBytes(32);
+    const b = randomBytes(32);
+    w.sim.voteSecretary(w.members[0], 0n, a);
+    expect(() => w.sim.voteSecretary(w.members[0], 0n, a)).toThrow(/already voted for that candidate/);
+    expect(() => w.sim.voteSecretary(w.members[1], 0n, a)).toThrow(/not the member in this slot/);
+    expect(() => w.sim.voteSecretary(strangerDevice(), 1n, a)).toThrow(/not the member in this slot/);
+    expect(() => w.sim.voteSecretary(w.members[0], 7n, a)).toThrow(/No member in this slot/);
+    w.sim.voteSecretary(w.members[1], 1n, a);
+    // slot 0 moves its vote to b: a is back to 1 vote, so a third vote for a is not yet a majority
+    w.sim.voteSecretary(w.members[0], 0n, b);
+    w.sim.voteSecretary(w.members[2], 2n, a);
+    expect(w.sim.ledger().secretaryKey).toEqual(roleKey(DOMAINS.secretary, w.setup.secretarySecret));
+    w.sim.voteSecretary(w.members[3], 3n, a);
+    expect(w.sim.ledger().secretaryKey).toEqual(roleKey(DOMAINS.secretary, a));
+    // a new round: old ballots do not count towards the next election
+    w.sim.voteSecretary(w.members[4], 4n, b);
+    expect(w.sim.ledger().secretaryKey).toEqual(roleKey(DOMAINS.secretary, a));
+  });
+
+  it('a vote leaks no amount', () => {
+    const w = makeWorld(5);
+    w.sim.recordMeeting(w.secretary, [E(37, 0, 4321)]);
+    w.sim.voteSecretary(w.members[0], 0n, randomBytes(32));
+    const vote = w.sim.txs[w.sim.txs.length - 1];
+    expect(containsNumber(vote.publicTranscript, 37n)).toBe(false);
+    expect(containsNumber(vote.publicTranscript, 4321n)).toBe(false);
+  });
+});
+
 describe('Undying Ledger: fee key rotation and membership', () => {
   it('secretary rotates the fee-key note (also after sunset)', () => {
     const w = makeWorld(3);
@@ -287,8 +358,8 @@ describe('Undying Ledger: fee key rotation and membership', () => {
     expect(w.sim.ledger().feeKeyEpoch).toBe(3n);
   });
 
-  it('group is capped at 10 members', () => {
-    const w = makeWorld(9);
+  it('group is capped at 30 members', () => {
+    const w = makeWorld(29);
     w.sim.addMember(w.secretary, randomBytes(32));
     expect(() => w.sim.addMember(w.secretary, randomBytes(32))).toThrow(/Group is full/);
   });
