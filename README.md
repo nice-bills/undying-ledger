@@ -26,7 +26,7 @@ A member's call was paid by the **group fee key**: the wallet that signed `recor
 - **Fee:** 1 SPECK per call (10⁻¹⁵ DUST) as the indexer and the explorer report it. The fee key spent 1,001 SPECK per call: the fee plus the wallet SDK's fixed 1,000 SPECK overhead.
 - **Proofs:** 2.9 to 3.9 s (`recordMeeting`) and 3.0 to 3.8 s (`attestSavings`) on the local proof server 8.1.0; about 25 to 30 s from submit to final.
 - **The endowment:** the deployer sent 2,500 tNIGHT to an NGO key, which registered it to the group fee key's DUST address (`register-dust endow`); the key had DUST within minutes.
-- **What did not run:** Lace. The v1 member side was a Node wallet-SDK script; v2 ran from Node and from `#/live` in a real browser with no wallet (see below). Lace with `payFees: false` is still untested (see Known limits).
+- **Lace:** on 13 Oct a real Lace wallet holding **0 DUST** signed `recordMeeting` and `attestSavings` from `#/live` with `payFees: false`, and the relay added the fee (see "Lace on Preprod" below). The v1 member side was a Node wallet-SDK script; v2 also ran from Node and from `#/live` with no wallet at all.
 
 ![The six beats of the demo: meeting 12, Ama's passbook, the husband's phone, sunset, meeting 13, the proof slip](media/strip.jpg)
 
@@ -57,6 +57,20 @@ Groups of 30 and the member vote, deployed as [`7a89acd2…3c2303`](https://prep
 - The third vote made 3 of 5, so the candidate's key became the secretary (`recoveryRound` 1). The new secretary checked every member's stamp against the sealed commitments, then recorded meeting 2. The group is in SUNSET: no maintainer could have done this.
 - One vote's fee reads **0 SPECK** on both the indexer and the explorer; the other six read 1 SPECK.
 - Before this deploy, a version that committed all 30 empty passbooks at creation was refused by Preprod ("Transaction would exhaust the block limits"); the contract now commits them a page of five at a time.
+
+### Lace on Preprod, with `payFees: false` (13 October 2026)
+
+A new throwaway Lace (Midnight) wallet in Chromium on the owner's laptop, switched to Preprod, proof server set to Local (`localhost:6300`), **0 tDUST**. A fresh v2 group, [`2e196521…c20e5da`](https://preprod.midnightexplorer.com/contracts/2e1965216ebe104a0dd382f7548f9dd5cb453e1f1b65bb75819d6ac49c20e5da) (deploy [`1de57abe…25c7dbba`](https://preprod.midnightexplorer.com/transactions/1de57abeed1557e9abc6ce8698fa06fb7c95645cc2d015d8e9e1431c25c7dbba)), and its fee-key relay on `localhost:3001`. On `#/live`: **Check my Lace setup**, join as the secretary, record meeting 1; reload, join as member 0, open the passbook, make a proof slip. Lace showed its "Prove transaction" sheet (no unshielded offers) and signed; it balanced each call **without adding a fee**, and the relay's `balanceFinalizedTransaction` accepted what Lace returned and added the DUST.
+
+| Call, signed in Lace | Transaction | Block | Fee |
+|---|---|---|---|
+| `recordMeeting` by the secretary | [`625e2fe2…663f8186`](https://preprod.midnightexplorer.com/transactions/625e2fe2f181644247fc69471209d6874c70d0cbbc1aa73d1d442369663f8186) | 2,968,251 | 1 SPECK |
+| `attestSavings` by member 0 | [`6703d63b…1b75dee1`](https://preprod.midnightexplorer.com/transactions/6703d63bc57ae926b863f61f7c0593046c71ba18ff4519310bd704341b75dee1) | 2,968,385 | 1 SPECK |
+
+- The `attestSavings` transaction carries two intents: `00788193…` from Lace (the page shows it as the slip's tx) and `00340c68…` from the relay's fee. The relay's `/health` counted both calls.
+- Also confirmed with the real wallet: `connect('preprod')`, Lace reports its prover (`localhost:6300`, flagged local), and Lace's configured indexer (Blockfrost) reads the register.
+- About 70 s from tapping Sign to the stamps on screen for `recordMeeting` (owner's watch, not split by stage). The cloud runs measured 3 to 4 s per proof and 25 to 30 s from submit to final; the rest is not yet accounted for.
+- The run found four bugs in the page, each now fixed with a test: (1) **`Buffer is not defined`** on the first Lace call: Lace gives Bech32m keys, and Midnight's `wallet-sdk-address-format` decodes them with Node's `Buffer` without importing it (the no-wallet path uses hex keys and never reached it); the write path now installs the `buffer` polyfill (`ui/src/lace/buffer-shim.ts`). (2) The first Join kept its providers, so after a too-weak passbook lock every later Join failed with the same message; the lock is now checked first with Midnight.js's own rules. (3) A **different lock** than the one this browser's passbook store was created with failed inside AES-GCM with an empty message, so the page showed nothing; it now says the lock differs and how to recover. (4) `findDeployedContract` has no timeout; the join now gives up after 90 s with a clear message.
 
 ## The problem, with evidence
 
@@ -93,7 +107,7 @@ The UI is built on the object every VSLA already trusts: the **cash box** with t
 | 5 | **Meeting 13 still records** | `recordMeeting` with no vendor and no admin key; the fee-key tank drains by exactly the fee. |
 | 6 | **Prove savings, keep the amount** | `attestSavings` proves “at least 30 shares” for a loan officer; the note rises out of the box’s slot. Asking for 33 when she holds 32 is refused by the circuit, and the note drops back in. |
 
-Also in the app: a **fee key page** (a relative points their NIGHT’s DUST at the key, a leaked key burns DUST but cannot write the book, time refills it, rotation starts a fresh key), **Terms** and **Privacy** pages, and a **live page** for a group deployed on Preprod (`#/live`): anyone can read its public register, and with Lace a member can join it by address and act on it (record a meeting, open their own passbook, prove at least N shares, call sunset). The live write path is wired and unit-tested with a mocked Lace, but has not been run against Preprod yet (see Known limits).
+Also in the app: a **fee key page** (a relative points their NIGHT’s DUST at the key, a leaked key burns DUST but cannot write the book, time refills it, rotation starts a fresh key), **Terms** and **Privacy** pages, and a **live page** for a group deployed on Preprod (`#/live`): anyone can read its public register, and with Lace a member can join it by address and act on it (record a meeting, open their own passbook, prove at least N shares, call sunset). The live write path ran on Preprod with a real Lace wallet on 13 Oct 2026 (`recordMeeting` and `attestSavings`, see above) and is unit-tested with a mocked Lace.
 
 The simulator makes no zero-knowledge proofs, so the proving skeletons stay up for a short fixed time and say so. Once real proof times are measured on Preprod they appear in those notes (see [PREPROD.md](PREPROD.md)).
 
@@ -180,7 +194,7 @@ Requires Node 22+.
 
 ```bash
 npm ci
-npm test                      # 25 contract + 2 demo-story + 34 live-wiring + 5 relay-guard tests (vitest)
+npm test                      # 25 contract + 2 demo-story + 40 live-wiring + 5 relay-guard tests (vitest)
 npm run typecheck             # contract, ui, chain
 npm run dev                   # the demo at http://localhost:5173
                               # http://localhost:5173/#/live?fake=1 previews the joined live screens with a made-up
@@ -203,7 +217,8 @@ npm run compact               # -> contract/src/managed/undying (contract/, zkir
 |---|---|---|
 | `contract/src/test/undying.test.ts` | 25 | every circuit, every refusal, a 30-member meeting over six pages, a new page when a sixth member joins, a secretary election after sunset and the new secretary rebuilding the book from stamps, raw public state searched for amounts and secrets, two groups with different balances have identically shaped public state |
 | `ui/src/demo/__tests__/engine.test.ts` | 2 | the demo story end to end on the engine; a leaked key drains fees (by overpaying) but not the book, rotation recovers |
-| `ui/src/lace/__tests__/live-session.test.ts` | 34 | the write path with a mocked `window.midnight` (dApp connector 4.0.1) and mocked Midnight.js providers: connect, network and prover checks, join by address, record meeting through the fee-key relay (`payFees: false`) or with Lace paying, the no-wallet path (proved here, bound, sent to the relay, Lace never touched), secretary election, own passbook and stamps checked with the real `passbookCommitment`, proof, sunset, and every error message |
+| `ui/src/lace/__tests__/live-session.test.ts` | 37 | the write path with a mocked `window.midnight` (dApp connector 4.0.1) and mocked Midnight.js providers: connect, network and prover checks, join by address, record meeting through the fee-key relay (`payFees: false`) or with Lace paying, the no-wallet path (proved here, bound, sent to the relay, Lace never touched), secretary election, own passbook and stamps checked with the real `passbookCommitment`, proof, sunset, and every error message |
+| `ui/src/lace/__tests__/buffer-shim.test.ts` | 3 | a browser has no `Buffer`: decoding a Lace Bech32m coin key fails without one and works with the live page's shim, which never replaces an existing `Buffer` |
 | `chain/src/relay/__tests__/guard.test.ts` | 5 | the relay's spend guard: a 30-member meeting fits, junk is capped per circuit with a retry time, hourly and daily totals, the meeting reserve, limits from the environment |
 | `e2e/tests/live.e2e.ts` | 1 per phone size | `#/live` loads from the static build, shows the recorded Preprod run with no wallet or token, says there is no Lace wallet; no write controls without one |
 | Preprod, by hand (12 Oct 2026) | 6 transactions | `scripts/preprod.sh` and `chain/src/scripts/*`: register-dust, deploy, endow, relay, `measure --apply`; hashes in [Ran on Midnight Preprod](#ran-on-midnight-preprod-12-october-2026) |
@@ -229,9 +244,9 @@ Done in Wave 2 after the first Preprod run: groups of 30, secretary recovery by 
 
 ## Known limits
 
-- **What ran on Preprod, and what has only been tested with mocks.** On Preprod (12 Oct 2026, see the table at the top): DUST registration, the deploy, the NGO endowment, the fee-key relay, and `recordMeeting`, `attestSavings` and `sunset` signed by a 0-DUST caller and paid by the relay, plus the vendor's `heartbeat` (and the refused early `sunset`) on a second group, all from Node with the wallet SDK. On 13 Oct, contract v2 (30 members, member vote) with **no member wallet at all**: the burner key and the relay, from Node, including the election of a new secretary after sunset. The **browser** no-wallet path on `#/live` also ran on Preprod (headless Chromium: join, keep a stamp, `attestSavings`, `voteSecretary`). **Not run on a network:** Lace (connect, `payFees: false`, Lace's transaction into the relay). It is covered by unit tests with a mocked Lace and mocked providers, which prove the wiring and the error paths, not that Lace behaves like the mock. Open questions:
-  - Does Lace honour `balanceUnsealedTransaction(tx, { payFees: false })`? The API type has it; wallet behaviour is unconfirmed. If Lace refuses, the page says “Lace would not balance this call without paying the fee itself (payFees: false)” and offers to let Lace pay from the member’s own DUST. If Lace accepts but still adds its own fee, the relay now refuses the call rather than add a second fee (written, not yet run).
-  - Will the relay accept what Lace returns? `balanceUnsealedTransaction` gives back a finalized transaction and the relay re-balances it with `balanceFinalizedTransaction` for DUST only. That pairing has not been exercised.
+- **What ran on Preprod, and what has only been tested with mocks.** On Preprod (12 Oct 2026, see the table at the top): DUST registration, the deploy, the NGO endowment, the fee-key relay, and `recordMeeting`, `attestSavings` and `sunset` signed by a 0-DUST caller and paid by the relay, plus the vendor's `heartbeat` (and the refused early `sunset`) on a second group, all from Node with the wallet SDK. On 13 Oct, contract v2 (30 members, member vote) with **no member wallet at all**: the burner key and the relay, from Node, including the election of a new secretary after sunset. The **browser** no-wallet path on `#/live` also ran on Preprod (headless Chromium: join, keep a stamp, `attestSavings`, `voteSecretary`). **Lace ran on Preprod** on 13 Oct, in Chromium on Linux with a 0-tDUST wallet: `recordMeeting` and `attestSavings`. Still only tested with mocks: Lace's own refusal paths (a wallet that refuses `payFees: false`, or that adds its own fee, which the relay is written to refuse), "Let Lace pay this fee", `sunset` and `voteSecretary` through Lace, and Lace on any other browser or on a phone.
+  - Answered on Preprod: Lace honours `balanceUnsealedTransaction(tx, { payFees: false })`: it balanced and signed both calls without a fee, from a wallet with 0 tDUST.
+  - Answered on Preprod: the relay accepts what Lace returns. `balanceFinalizedTransaction` (DUST only) added the fee to Lace's finalized transaction and both calls landed with `SUCCESS`.
   - Answered on Preprod: `levelPrivateStateProvider` (IndexedDB through `browser-level`) works in the Vite build in a real browser (Chromium); a member's stamp was kept and then proved against.
   - Answered on Preprod: a fresh wallet syncs about 1.65 million DUST events from genesis in roughly 1 h 45 min (CPU-bound, one core), so `chain/src/wallet-state.ts` saves and restores synced state (a restore takes about 6.5 min) and `npm run sync-wallets -w chain` syncs the wallets ahead of time. Real proofs took 3.8 to 3.9 s.
   - Answered on Preprod: a browser can call Blockfrost directly with a pasted token (CORS allowed), and the local proof server at `localhost:6300` accepts the page's requests. Tested in Chromium only, not Safari or Firefox.

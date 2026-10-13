@@ -36,7 +36,7 @@ Undying Ledger is a private record book for a village savings and loan associati
 ```bash
 npm ci
 npm run compact      # compactc 0.31.1 (pinned; 0.34+ targets ledger 9 and cannot deploy to Preprod)
-npm test             # 25 contract + 36 ui + 5 relay guard = 66 passing
+npm test             # 25 contract + 42 ui + 5 relay guard = 72 passing
 npm run typecheck    # contract, ui, chain
 npm run build        # ui/dist -> docs/ (commit docs/ so Pages updates)
 npm run dev          # local; open #/live?fake=1 for the fake joined session
@@ -45,7 +45,7 @@ npm run test:e2e     # needs Chromium; E2E_CDP can attach to an existing browser
 
 Pinned versions (Preprod support matrix, 9 Oct 2026): Compact 0.31.1, compact-runtime 0.16.0, Midnight.js 4.1.1, DApp Connector API 4.0.1, Wallet SDK 1.2.0, proof server 8.1.0. Midnight retired its own Preprod indexer and RPC on 9 Oct 2026, so every Preprod call now goes through **Blockfrost** (`BLOCKFROST_PROJECT_ID`, starts with `nightpreprod`).
 
-## Status (13 Oct 2026, HEAD on main)
+## Status (13 Oct 2026 evening, HEAD on main)
 
 **Ran on Midnight Preprod (12 Oct 2026, cloud session, wallet SDK from Node, no Lace)**
 - register-dust self `008d6278…ab357c7`; deploy `e95e3769…f3bef5`, contract `726bb6e0ce9d67ecc5c587a2f5f509ae39c26dbfd29d71c75f8d7de090ed7c61` (block 2,949,765, 300 s grace); endow transfer `00d7c29c…243b91` and NGO registration `008b8744…281bc6` to the fee key's DUST address.
@@ -58,13 +58,19 @@ Pinned versions (Preprod support matrix, 9 Oct 2026): Compact 0.31.1, compact-ru
 - Relay spend guard (`chain/src/relay/guard.ts`) ran live: `/health` counted the 7 calls.
 - Cheap phone (`scripts/cheap-phone.mjs`, `media/cheap-phone.json`, against Pages, 13 Oct after the landing and the ledger cache): 6x CPU + slow 4G: landing usable 2.8 s (no wasm), tap to meeting 12 ready 16 s, recordMeeting 8.4 s and attestSavings 6.1 s tap to result (2.6 / 3.4 s of that is the on-screen minimum); 3G: landing 4.4 s, demo 23 s. The engine caches the ledger view per transaction: the 1 s demo clock re-rendering every beat had cost ~14% idle CPU and tripled circuit times on the slow profile.
 
+**Lace on Preprod (13 Oct 2026, owner's laptop: Arch, Chromium 154, a new Lace wallet with 0 tDUST, local proof server)**
+- Own v2 group `2e196521…c20e5da` (deploy `1de57abe…25c7dbba`, 18:04 UTC, 1 h grace), its relay on :3001. Secrets in the laptop's `.preprod/group.json` (not in the cloud container).
+- Through `#/live` with Lace (`payFees: false`, relay adds the fee): secretary `recordMeeting` `625e2fe2…663f8186` (block 2,968,251) and member 0 `attestSavings` `6703d63b…1b75dee1` (block 2,968,385), 1 SPECK each, `SUCCESS`. So Lace honours `payFees:false` and the relay's `balanceFinalizedTransaction` accepts Lace's transaction. Shown on `#/live` (`PREPROD_RUN.lace`) and as a fifth line on the landing.
+- Bugs it found, fixed with tests: `Buffer is not defined` (Lace's Bech32m keys go through `wallet-sdk-address-format`, which uses a bare `Buffer`; `ui/src/lace/buffer-shim.ts`); the first Join's providers were cached with its passbook lock; a lock different from the browser store's first one failed with an empty AES-GCM `OperationError` (blank error line); `findDeployedContract` had no timeout (90 s now). The page now logs a failed action's error and cause.
+- Owner feedback: about 70 s from Sign to stamps on `recordMeeting` (not split by stage), and typing contract, secrets and a 16-character lock is too much for members. Proposed, waiting for the owner's yes: per-stage timing, show "sent" when the relay accepts, invite link/QR join (secrets in the URL fragment), a short PIN instead of the lock, a "leave / join as someone else" button.
+
 **Still only tested with mocks**
-- Lace: `payFees:false`, Lace's finalized transaction into the relay. Needs Lace on Preprod with a throwaway wallet; the owner has to do this or drive it.
+- Lace refusal paths (a wallet that refuses `payFees:false`, or adds its own fee), "Let Lace pay", `sunset` / `voteSecretary` through Lace, Lace on other browsers or phones.
 - (Answered 13 Oct: `#/live` "Use without a wallet" ran on Preprod in headless Chromium, `scripts/browser-preprod.mjs`: join, keep stamp, attestSavings `761e7bc2…c9246e` (block 2,956,914), voteSecretary `89a0afbb…3e360e` (2,956,919). So browser Blockfrost CORS, browser private state, and browser to local proof server all work. First run found `Buffer is not defined` in the browser hex helpers, fixed in `chain/src/hex.ts`; the Lace path had the same bug.)
 - (`heartbeat` ran on Preprod on 12 Oct: second group `f1c7d8dc…ec3485` (1 h grace, deploy `c0a2ab57…feaf8a`, block 2,955,001), `heartbeat` `4fd7f18c…73d706` (block 2,955,062, 1 SPECK from the vendor's own DUST; the relay does not sponsor admin calls), then a member's `sunset` was refused by the circuit, `npm run heartbeat:preprod -w chain`, secrets in `.preprod/group2.json`. `sunset` ran: `76cadb73…3fd0f9`, block 2,950,326, by a 0-DUST member through the relay, `npm run sunset:preprod -w chain`. The group is in SUNSET; after it, `recordMeeting` `ec0e88f8…57c99a` (block 2,950,410) and `attestSavings` `288b0711…d6fc55` (block 2,950,415) ran through the relay with 0 DUST.)
 
 **Done and verified in the cloud session**
-- 66 unit tests, typecheck, e2e passed / 2 agentic skipped at 390 and 430 (e2e needs Node >= 22.22.3; the container has 22.22.0, so a Node 24 tarball was used).
+- 66 unit tests (72 since the Lace run), typecheck, e2e passed / 2 agentic skipped at 390 and 430 (e2e needs Node >= 22.22.3; the container has 22.22.0, so a Node 24 tarball was used).
 - UI rebuilt as the cash box (owner's choice); launch video `media/launch-wide.mp4` and `-tall.mp4` (57 s, opens on the landing, `media/launch/make.sh`, ends on the Preprod record in `#/live`); demo.mp4 and the narrated cut (82 s; narration re-timed to the new beats). All re-rendered after the measurement, so receipts show 1 SPECK.
 - Proving keys ship in `docs/zk/` so `#/live` can prove from Pages.
 
@@ -75,8 +81,8 @@ Pinned versions (Preprod support matrix, 9 Oct 2026): Compact 0.31.1, compact-ru
 - Never use `pkill -f <pattern>` in a tool command: it matches the tool's own shell.
 
 **Next steps, in order**
-1. Lace `payFees:false` on the owner's laptop (PREPROD.md step 9). Optional now: the no-wallet path already ran from a browser on Preprod, so members are covered either way.
-2. Deck (Google Slides "Undying Ledger - AKINDO Midnight Buildathon", owner's Drive): slides 9, 12, 13 and 14 updated in place on 12 Oct to the Preprod run (1 SPECK fee, 5 calls by a 0-DUST caller, verified vs not-yet-verified split; heartbeat moved to verified); slides 1, 12, 13, 14 updated again on 13 Oct for v2 (9 circuits, 66 tests, 14 member calls at 0 DUST, no-wallet from a browser verified). Re-check after the Lace test.
+1. Done 13 Oct: Lace `payFees:false` on the owner's laptop (see above). Next, if the owner agrees: the member UX items listed under "Lace on Preprod".
+2. Deck (Google Slides "Undying Ledger - AKINDO Midnight Buildathon", owner's Drive): slides 9, 12, 13 and 14 updated in place on 12 Oct to the Preprod run (1 SPECK fee, 5 calls by a 0-DUST caller, verified vs not-yet-verified split; heartbeat moved to verified); slides 1, 12, 13, 14 updated again on 13 Oct for v2 (9 circuits, 66 tests, 14 member calls at 0 DUST, no-wallet from a browser verified). Re-check after the Lace test: Lace moved to verified on 13 Oct (2 calls, 0 tDUST); the deck has not been updated for it yet.
 3. The owner submits on AKINDO personally. **Do not submit, post publicly, or spend money without the owner's explicit yes.** Aim for 17 Oct.
 
 ## Design rules (the owner's standing rules; do not drift)

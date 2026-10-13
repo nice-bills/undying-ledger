@@ -3,8 +3,8 @@
 // Shape adapted from midnightntwrk/example-bboard api/src/index.ts
 // (Apache-2.0, Copyright (C) Midnight Foundation).
 //
-// NOT RUN AGAINST PREPROD: it needs a proof server, an indexer and a funded or sponsored wallet.
-// Typechecked, and unit-tested with mocked providers (ui/src/lace/__tests__/live-session.test.ts).
+// RAN ON PREPROD from Node and from #/live (no wallet, and with a real Lace wallet, 13 Oct 2026).
+// Also unit-tested with mocked providers (ui/src/lace/__tests__/live-session.test.ts).
 
 import { deployContract, findDeployedContract } from '@midnight-ntwrk/midnight-js-contracts';
 import type { ContractAddress } from '@midnight-ntwrk/midnight-js-protocol/compact-runtime';

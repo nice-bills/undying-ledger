@@ -15,10 +15,10 @@
 //     encrypted with a passphrase the member types, scoped to their wallet;
 //   * every step reports a stage ('proving', 'balancing', 'relay', 'submitting') for the UI.
 //
-// NOT RUN AGAINST PREPROD (no Lace, no proof server, no tNIGHT on the build machine).
-// Typechecked, and unit-tested with a mocked window.midnight and mocked Midnight.js providers
-// (ui/src/lace/__tests__). Open question: whether Lace honours balanceUnsealedTransaction(tx,
-// { payFees: false }); if it refuses, the page says so and offers the Lace-pays path.
+// RAN ON PREPROD, 13 Oct 2026, with a real Lace wallet holding 0 tDUST: Lace honours
+// balanceUnsealedTransaction(tx, { payFees: false }) and the relay accepted what it returned
+// (README "Lace on Preprod"). A wallet that refuses it is tested with mocks only; the page then
+// says so and offers the Lace-pays path.
 
 import type { Configuration, ConnectedAPI, InitialAPI } from '@midnight-ntwrk/dapp-connector-api';
 import { FetchZkConfigProvider } from '@midnight-ntwrk/midnight-js-fetch-zk-config-provider';

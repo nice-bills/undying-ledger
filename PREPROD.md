@@ -5,8 +5,9 @@ and proof times in the UI. Expect two to three hours, most of it a one-time wall
 
 > **What has and has not been run.** On 12 October 2026 the wallet-SDK path ran end to end on
 > Preprod from a cloud container: `register-dust self`, the deploy, `register-dust endow`, the
-> fee-key relay, and `measure --apply` in relay mode (hashes in the README). **The Lace path
-> (step 9, `payFees: false`) has not been run**; it is tested only with a mocked Lace.
+> fee-key relay, and `measure --apply` in relay mode (hashes in the README). On 13 October 2026
+> **the Lace path (step 9, `payFees: false`) ran too**, from a 0-tDUST Lace wallet in Chromium on
+> the owner's laptop: `recordMeeting` `625e2fe2…663f8186` and `attestSavings` `6703d63b…1b75dee1`.
 
 ### The order that worked (12 Oct 2026, seeds instead of Lace)
 
@@ -196,12 +197,20 @@ relay adding the fee, or Lace submitting. Errors are the page's own words for: n
 declined, wrong network, no prover or a remote one, no indexer, contract not found, Lace refusing
 `payFees: false`, relay unreachable or refusing, and the circuit's own refusals.
 
-> **Status of this step.** Wired and typechecked; covered by 28 unit tests with a mocked
-> `window.midnight` and mocked providers, and by an e2e smoke test of `#/live` without Lace.
-> **Not yet run against Preprod.** Open question: whether Lace honours
-> `balanceUnsealedTransaction(tx, { payFees: false })`. If it refuses, the page says so and offers
-> **Let Lace pay this fee instead**. If it accepts but still adds its own fee, the relay refuses
-> the call rather than add a second fee (written, not yet run).
+> **Status of this step.** **Ran on Preprod on 13 Oct 2026** with a new Lace (Midnight) wallet
+> holding 0 tDUST, in Chromium on Linux, through the relay: the secretary's `recordMeeting`
+> (`625e2fe2…663f8186`, block 2,968,251) and member 0's `attestSavings` (`6703d63b…1b75dee1`,
+> block 2,968,385), 1 SPECK each, paid by the group fee key. Lace honours
+> `balanceUnsealedTransaction(tx, { payFees: false })` and the relay accepts what it returns.
+> About 70 s from Sign to the stamps for `recordMeeting`, not yet split by stage. Still only
+> tested with mocks: a wallet that refuses `payFees: false` (the page then offers **Let Lace pay
+> this fee instead**), a wallet that adds its own fee (the relay refuses it), and `sunset` or
+> `voteSecretary` through Lace.
+>
+> What to expect, from that run: after **Check my Lace setup**, Lace asks to authorize
+> `localhost:5173`; each call shows Lace's **Prove transaction** sheet. Use one passbook lock per
+> browser: the store is encrypted with the first one (see Troubleshooting). There is no "leave"
+> button yet; reload the page to join with another role.
 
 ### 9b. Act on the book with no wallet at all
 
@@ -237,8 +246,8 @@ fee key's DUST address, and new DUST starts at zero. The deploy step writes that
 `.preprod/group.json` as `groupFeeKeyDustAddress`, the relay logs it before its first sync, and
 `GET /health` returns it as `dustAddress`. The relay also refuses a call that already carries a
 DUST fee from the member's wallet, so a fee is never paid twice. (Both changes were written
-without a network or installed packages; run `npm run typecheck` first.) Also open: whether Lace honours `balanceUnsealedTransaction(tx, { payFees: false })`,
-and whether the relay's `balanceFinalizedTransaction` accepts what Lace returns. Put the relay's
+without a network or installed packages; run `npm run typecheck` first.) On 13 Oct 2026 the relay's
+`balanceFinalizedTransaction` accepted Lace's `payFees: false` transactions (step 9). Put the relay's
 URL in the live page's relay field (or `&relay=` in the page URL). The relay answers CORS
 preflights from any origin.
 
@@ -274,4 +283,6 @@ scripts/preprod.sh down
 | `Wallet sync timeout` right after a transaction | Blockfrost's idle subscription reports progress about every 4 to 5 minutes; wait longer. |
 | Proof server never becomes healthy | first start downloads parameters; `docker compose -f chain/compose.yml logs`. |
 | `DustDoubleSpend` (196) from the relay | two relays spent the same DUST UTXO; retry. Split the endowment across several NIGHT UTXOs. |
+| `ReferenceError: Buffer is not defined` on the first Lace call | a build from before 13 Oct 2026: Lace's Bech32m keys are decoded by a Midnight package that uses Node's `Buffer`. The write path now installs a polyfill (`ui/src/lace/buffer-shim.ts`). |
+| **Join this group** goes back to idle, or says "a different passbook lock" | this browser's passbook store was created with another lock. Type that one, or clear the site's data (Site settings, Delete data) and join again; then keep your latest stamp. |
 | The live page says "Failed to fetch" with a pasted token | the browser blocked a cross-origin request to Blockfrost (seen with an invalid token on the build machine; not tested with a valid one). Use the Lace path, or put a small proxy in front of the indexer. |

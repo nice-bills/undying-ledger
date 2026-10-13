@@ -127,6 +127,46 @@ export function PreprodRecord() {
           </table>
         </>
       )}
+      {r.lace && (
+        <>
+          <span className="label" style={{ display: 'block', marginTop: 18 }}>
+            With a Lace wallet, {r.lace.at.slice(0, 10)}
+          </span>
+          <p style={{ marginTop: 4 }}>
+            Contract{' '}
+            <a className="textlink" href={contractLink(r.lace.contract)} target="_blank" rel="noreferrer">
+              {short(r.lace.contract)}
+            </a>
+            . A Lace wallet holding 0 DUST signed both calls on this page. Lace left the fee out, and the group fee key paid it.
+          </p>
+          <table className="ledger" data-testid="preprod-lace">
+            <thead>
+              <tr>
+                <th scope="col">Call</th>
+                <th scope="col">Transaction</th>
+                <th scope="col" className="r">
+                  Fee
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {r.lace.rows.map((row) => (
+                <tr key={row.txHash}>
+                  <th scope="row">{row.label}</th>
+                  <td>
+                    <a className="textlink" href={txLink(row.txHash)} target="_blank" rel="noreferrer">
+                      {short(row.txHash)}
+                    </a>
+                  </td>
+                  <td className="r num" style={{ whiteSpace: 'nowrap' }}>
+                    {row.feeSpeck} SPECK
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
       {r.heartbeat && (
         <p className="note">
           On a second group (

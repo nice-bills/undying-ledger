@@ -33,6 +33,16 @@ export type PreprodRun = {
     /** The same no-wallet path from this page in a real browser (headless Chromium), not from Node. */
     browser?: { label: string; txHash: string; block: number; feeSpeck: string }[];
   };
+  /**
+   * A real Lace wallet holding 0 tDUST, on #/live in Chromium: Lace balanced each call with
+   * payFees: false and signed it, the group fee-key relay added the DUST fee.
+   */
+  lace?: {
+    contract: string;
+    deployTxHash: string;
+    at: string;
+    rows: { label: string; txHash: string; block: number; feeSpeck: string }[];
+  };
   /** A second group (1 h grace) where the vendor checked in; a member's sunset was then refused. */
   heartbeat?: { contract: string; deployTxHash: string; txHash: string; block: number; sunsetRefused: string };
 };
@@ -134,6 +144,25 @@ export const PREPROD_RUN: PreprodRun | null = {
         "block": 2956788,
         "feeSpeck": "1",
         "proofSeconds": 2.1
+      }
+    ]
+  },
+  "lace": {
+    "contract": "2e1965216ebe104a0dd382f7548f9dd5cb453e1f1b65bb75819d6ac49c20e5da",
+    "deployTxHash": "1de57abeed1557e9abc6ce8698fa06fb7c95645cc2d015d8e9e1431c25c7dbba",
+    "at": "2026-10-13T21:35:42.001Z",
+    "rows": [
+      {
+        "label": "recordMeeting, signed in Lace",
+        "txHash": "625e2fe2f181644247fc69471209d6874c70d0cbbc1aa73d1d442369663f8186",
+        "block": 2968251,
+        "feeSpeck": "1"
+      },
+      {
+        "label": "attestSavings, signed in Lace",
+        "txHash": "6703d63bc57ae926b863f61f7c0593046c71ba18ff4519310bd704341b75dee1",
+        "block": 2968385,
+        "feeSpeck": "1"
       }
     ]
   },

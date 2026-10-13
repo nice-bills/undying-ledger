@@ -4,7 +4,9 @@
 // Each button calls a real circuit through LiveSession (chain/src/api.ts) with Lace's providers
 // (chain/src/browser.ts). Loaded on demand after Lace connects.
 //
-// NOT RUN AGAINST PREPROD. Wired, typechecked and unit-tested with mocked providers only.
+// RAN ON PREPROD, 13 Oct 2026: with a real Lace wallet holding 0 tDUST (recordMeeting and
+// attestSavings, payFees: false, fee added by the relay; README "Lace on Preprod") and with no
+// wallet at all. Also unit-tested with mocked providers (ui/src/lace/__tests__).
 import { useEffect, useRef, useState } from 'react';
 import { ZERO_ENTRY, type Entry } from '@undying-ledger/contract';
 import type { GroupView, LiveSession, Role, Stage } from './live-session';
@@ -71,8 +73,10 @@ export default function LiveWrite({ session, address, blockfrost }: { session: L
       const m = await f();
       if (m) setOut(m);
     } catch (e) {
-      // the line on screen is for the member; the stack (with the cause Midnight.js wraps) is for whoever debugs
-      console.error(e, (e as { cause?: unknown })?.cause);
+      // The line on screen is for the member. An unexpected failure (not one of the page's own
+      // LiveErrors, which already say what to do) also goes to the console with the cause
+      // Midnight.js wraps, for whoever debugs: that is how "Buffer is not defined" was traced.
+      if (!(e as { code?: string })?.code) console.error(e, (e as { cause?: unknown })?.cause);
       setErr(msgOf(e));
       setErrCode((e as { code?: string })?.code ?? '');
     } finally {
@@ -137,7 +141,7 @@ export default function LiveWrite({ session, address, blockfrost }: { session: L
   const prove = () =>
     act('prove', async () => {
       const r = await session.proveAtLeast(min);
-      return `Proof slip on the book: at least ${r.minShares} shares. Ref. ${r.ref}${r.txId ? `, tx ${r.txId.slice(0, 16)}` : ''}. Your total stays on this phone.`;
+      return `Proof slip on the book: at least ${r.minShares} ${Number(r.minShares) === 1 ? 'share' : 'shares'}. Ref. ${r.ref}${r.txId ? `, tx ${r.txId.slice(0, 16)}` : ''}. Your total stays on this phone.`;
     });
 
   const vote = () =>

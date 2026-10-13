@@ -17,7 +17,7 @@ function proofRows(): Row[] {
   const v2 = PREPROD_RUN?.v2;
   if (!v2) return [];
   const pick = (label: string) => v2.rows.find((r) => r.label === label);
-  const rows = [pick('recordMeeting'), pick('sunset'), pick('voteSecretary, slot 2: elected'), v2.browser?.[0]].filter(Boolean) as Row[];
+  const rows = [pick('recordMeeting'), pick('sunset'), pick('voteSecretary, slot 2: elected'), v2.browser?.[0], PREPROD_RUN?.lace?.rows[0]].filter(Boolean) as Row[];
   return rows.map((r) => ({ ...r, label: r.label.replace('voteSecretary, slot 2: elected', 'voteSecretary, elected') }));
 }
 

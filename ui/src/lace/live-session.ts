@@ -8,7 +8,9 @@
 // read-only register ships it. Shape follows example-bboard's BrowserDeployedBoardManager
 // (cached providers, join by address) and api/src/index.ts.
 //
-// NOT RUN AGAINST PREPROD: the build machine had no Lace, no proof server and no tNIGHT.
+// RAN ON PREPROD, 13 Oct 2026: with a real Lace wallet holding 0 tDUST (recordMeeting and
+// attestSavings, payFees: false, fee added by the relay; README "Lace on Preprod") and with no
+// wallet at all. Also unit-tested with mocked providers (ui/src/lace/__tests__).
 import './buffer-shim';
 import type { ConnectedAPI } from '@midnight-ntwrk/dapp-connector-api';
 import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';

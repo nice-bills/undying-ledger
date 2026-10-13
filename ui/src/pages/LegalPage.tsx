@@ -41,7 +41,7 @@ function Terms({ h }: { h: React.RefObject<HTMLHeadingElement | null> }) {
         <h3>No warranty</h3>
         <p>
           The software is open source under the Apache License 2.0 and is provided as is, without warranties of any kind. It has not been
-          audited and has not yet run on a public network. Fee figures marked as placeholders are estimates, not measurements.
+          audited and has run only on Midnight's Preprod test network, not on Mainnet. Fee figures marked as placeholders are estimates, not measurements.
         </p>
         <h3>Changes</h3>
         <p>We may change these terms when the software changes. The version in the project’s repository is the current one.</p>
