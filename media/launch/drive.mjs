@@ -81,7 +81,8 @@ const beat = (sel, n) => `[data-testid=beat-${n}] ${sel}`;
 const scrollBeat = (n, y) => page.evaluate(([n, y]) => document.getElementById('app').contentDocument.querySelector(`[data-testid=beat-${n}]`).scrollTo({ top: y, behavior: 'smooth' }), [n, y]);
 
 // 00 THE FRONT DOOR: the landing's hero plays (a meeting goes into the box and the receipt prints)
-await app.locator('#lp-receipt').evaluate((el) => new Promise((r) => { const f = () => (el.getAnimations().every((a) => a.playState === 'finished') && getComputedStyle(el).clipPath.includes('0px 0px 0px') ? r() : setTimeout(f, 50)); setTimeout(f, 300); }));
+// wait (at most 8 s) until the receipt has printed, so the callout points at it
+await app.locator('#lp-receipt').evaluate((el) => new Promise((r) => { const t0 = Date.now(); const f = () => { const a = el.getAnimations(); if ((a.length && a.every((x) => x.playState === 'finished')) || Date.now() - t0 > 8000) r(); else setTimeout(f, 50); }; f(); }));
 await atRaw(6.0); await S('callout', '.lp-receipt .lp-r:nth-of-type(2) b', 'The real fee on Preprod');
 await atRaw(7.0); await S('uncall');
 await atRaw(7.3); await tap(app.getByRole('link', { name: 'Open the demo' }));
