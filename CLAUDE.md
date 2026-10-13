@@ -58,8 +58,8 @@ Pinned versions (Preprod support matrix, 9 Oct 2026): Compact 0.31.1, compact-ru
 - Cheap phone (`scripts/cheap-phone.mjs`, `media/cheap-phone.json`, against Pages): 6x CPU + slow 4G: first paint 0.9 s, usable 12.5 s, 769 KB; 3G: 1.5 s / 22.4 s.
 
 **Still only tested with mocks**
-- Lace: `payFees:false`, Lace's finalized transaction into the relay, `levelPrivateStateProvider` in a real browser, browser Blockfrost CORS with a valid token. Needs Lace on Preprod with a throwaway wallet; the owner has to do this or drive it.
-- `#/live` "Use without a wallet" in a real browser (burner path ran from Node only): needs a local proof server, a Blockfrost token pasted in the page and a relay reachable from the browser.
+- Lace: `payFees:false`, Lace's finalized transaction into the relay. Needs Lace on Preprod with a throwaway wallet; the owner has to do this or drive it.
+- (Answered 13 Oct: `#/live` "Use without a wallet" ran on Preprod in headless Chromium, `scripts/browser-preprod.mjs`: join, keep stamp, attestSavings `761e7bc2…c9246e` (block 2,956,914), voteSecretary `89a0afbb…3e360e` (2,956,919). So browser Blockfrost CORS, browser private state, and browser to local proof server all work. First run found `Buffer is not defined` in the browser hex helpers, fixed in `chain/src/hex.ts`; the Lace path had the same bug.)
 - (`heartbeat` ran on Preprod on 12 Oct: second group `f1c7d8dc…ec3485` (1 h grace, deploy `c0a2ab57…feaf8a`, block 2,955,001), `heartbeat` `4fd7f18c…73d706` (block 2,955,062, 1 SPECK from the vendor's own DUST; the relay does not sponsor admin calls), then a member's `sunset` was refused by the circuit, `npm run heartbeat:preprod -w chain`, secrets in `.preprod/group2.json`. `sunset` ran: `76cadb73…3fd0f9`, block 2,950,326, by a 0-DUST member through the relay, `npm run sunset:preprod -w chain`. The group is in SUNSET; after it, `recordMeeting` `ec0e88f8…57c99a` (block 2,950,410) and `attestSavings` `288b0711…d6fc55` (block 2,950,415) ran through the relay with 0 DUST.)
 
 **Done and verified in the cloud session**
@@ -74,7 +74,7 @@ Pinned versions (Preprod support matrix, 9 Oct 2026): Compact 0.31.1, compact-ru
 - Never use `pkill -f <pattern>` in a tool command: it matches the tool's own shell.
 
 **Next steps, in order**
-1. On the owner's laptop: `#/live` "Use without a wallet" against the v2 group (no Lace needed; PREPROD.md step 9b), then Lace `payFees:false` (step 9). If Lace refuses `payFees:false`, the no-wallet path already covers members.
+1. Lace `payFees:false` on the owner's laptop (PREPROD.md step 9). Optional now: the no-wallet path already ran from a browser on Preprod, so members are covered either way.
 2. Deck (Google Slides "Undying Ledger - AKINDO Midnight Buildathon", owner's Drive): slides 9, 12, 13 and 14 updated in place on 12 Oct to the Preprod run (1 SPECK fee, 5 calls by a 0-DUST caller, verified vs not-yet-verified split; heartbeat moved to verified). Re-check after the Lace test.
 3. The owner submits on AKINDO personally. **Do not submit, post publicly, or spend money without the owner's explicit yes.** Aim for 17 Oct.
 

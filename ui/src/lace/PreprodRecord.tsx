@@ -97,7 +97,7 @@ export function PreprodRecord() {
             <a className="textlink" href={contractLink(r.v2.contract)} target="_blank" rel="noreferrer">
               {short(r.v2.contract)}
             </a>
-            , up to 30 members. Every call was proved, bound by a throwaway key that holds nothing, and paid by the group fee key. After sunset three of five members elected a new secretary, who rebuilt the book from their stamps and recorded a meeting.
+            , up to 30 members. Every call was proved, bound by a throwaway key that holds nothing, and paid by the group fee key. After sunset three of five members elected a new secretary, who rebuilt the book from their stamps and recorded a meeting. The last two calls came from this page in a browser, with no wallet.
           </p>
           <table className="ledger" data-testid="preprod-v2">
             <thead>
@@ -110,7 +110,7 @@ export function PreprodRecord() {
               </tr>
             </thead>
             <tbody>
-              {r.v2.rows.map((row) => (
+              {[...r.v2.rows, ...(r.v2.browser ?? []).map((b) => ({ ...b, proofSeconds: 0 }))].map((row) => (
                 <tr key={row.txHash}>
                   <th scope="row">{row.label}</th>
                   <td>
@@ -118,7 +118,9 @@ export function PreprodRecord() {
                       {short(row.txHash)}
                     </a>
                   </td>
-                  <td className="r num">{row.feeSpeck} SPECK</td>
+                  <td className="r num" style={{ whiteSpace: 'nowrap' }}>
+                    {row.feeSpeck} SPECK
+                  </td>
                 </tr>
               ))}
             </tbody>

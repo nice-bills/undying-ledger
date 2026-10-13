@@ -9,7 +9,7 @@
 // Node and in the browser (no extension, no wallet sync, no tokens).
 import { ZswapSecretKeys, type FinalizedTransaction } from '@midnight-ntwrk/midnight-js-protocol/ledger';
 import type { UnboundTransaction } from '@midnight-ntwrk/midnight-js-types';
-import { toHex } from '@midnight-ntwrk/midnight-js-utils';
+import { bytesToHex as toHex } from './hex.js';
 
 export type BurnerWallet = {
   getCoinPublicKey: () => string;

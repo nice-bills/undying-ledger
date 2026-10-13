@@ -24,7 +24,15 @@ export type PreprodRun = {
    * burner key and paid by the group fee-key relay. Ends with three members electing a new
    * secretary after sunset, who then records a meeting.
    */
-  v2?: { contract: string; deployTxHash: string; deployBlock: number; at: string; rows: { label: string; txHash: string; block: number; feeSpeck: string; proofSeconds: number }[] };
+  v2?: {
+    contract: string;
+    deployTxHash: string;
+    deployBlock: number;
+    at: string;
+    rows: { label: string; txHash: string; block: number; feeSpeck: string; proofSeconds: number }[];
+    /** The same no-wallet path from this page in a real browser (headless Chromium), not from Node. */
+    browser?: { label: string; txHash: string; block: number; feeSpeck: string }[];
+  };
   /** A second group (1 h grace) where the vendor checked in; a member's sunset was then refused. */
   heartbeat?: { contract: string; deployTxHash: string; txHash: string; block: number; sunsetRefused: string };
 };
@@ -63,6 +71,20 @@ export const PREPROD_RUN: PreprodRun | null = {
     "deployTxHash": "1bf5e31ada871fb21b55c1f2cea7588d1b29e0fc5b6c4759f0e031c15668b4ce",
     "deployBlock": 2956697,
     "at": "2026-10-13T02:29:42.626Z",
+    "browser": [
+      {
+        "label": "attestSavings, from a browser",
+        "txHash": "761e7bc2ed64f516facd0c922ab7adfed400df503926135c5e3984625ac9246e",
+        "block": 2956914,
+        "feeSpeck": "1"
+      },
+      {
+        "label": "voteSecretary, from a browser",
+        "txHash": "89a0afbb9142018a9d75ca768675d3ca9645ad5a64e28dfa34b597f01d3e360e",
+        "block": 2956919,
+        "feeSpeck": "1"
+      }
+    ],
     "rows": [
       {
         "label": "recordMeeting",

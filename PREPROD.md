@@ -217,7 +217,7 @@ and sends it to the relay, which adds the fee. Nothing to install but Docker for
 
 The same path ran from Node on 13 Oct 2026 against contract v2 (`npm run burner:preprod -w chain`,
 see the README table): a meeting, a proof, sunset, three votes that elected a new secretary, and a
-meeting by her. In a browser it has only been tested with mocks.
+meeting by her. From a browser it ran on 13 Oct too (`scripts/browser-preprod.mjs`, headless Chromium): join, keep a stamp, a proof slip and a vote.
 
 ```bash
 GROUP_JSON=.preprod/group3.json RELAY_URL=http://localhost:3001 BURNER_OUT=.preprod/burner-run.json \

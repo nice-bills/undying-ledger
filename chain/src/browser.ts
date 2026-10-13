@@ -25,7 +25,7 @@ import { FetchZkConfigProvider } from '@midnight-ntwrk/midnight-js-fetch-zk-conf
 import { httpClientProofProvider } from '@midnight-ntwrk/midnight-js-http-client-proof-provider';
 import { indexerPublicDataProvider } from '@midnight-ntwrk/midnight-js-indexer-public-data-provider';
 import { levelPrivateStateProvider } from '@midnight-ntwrk/midnight-js-level-private-state-provider';
-import { fromHex, toHex } from '@midnight-ntwrk/midnight-js-protocol/compact-runtime';
+import { bytesToHex as toHex, hexToBytes as fromHex } from './hex.js';
 import {
   type Binding,
   type FinalizedTransaction,
@@ -137,12 +137,14 @@ export function resolveIndexer(config: Pick<Configuration, 'indexerUri' | 'index
 
 /** POST a bound, fee-less transaction to the group fee-key relay. Returns the tx id. */
 export async function submitViaGroupFeeKey(relayUrl: string, tx: FinalizedTransaction): Promise<TransactionId> {
+  // serialise before the request, so a failure here is not reported as the relay not answering
+  const payload = JSON.stringify({ tx: toHex(tx.serialize()) });
   let res: Response;
   try {
     res = await fetch(new URL('/sponsor', relayUrl), {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ tx: toHex(tx.serialize()) }),
+      body: payload,
     });
   } catch (e) {
     throw new LiveError('relay-unreachable', `The fee-key relay at ${relayUrl} did not answer (${reasonOf(e)}). Is it running? See PREPROD.md step 10.`, { cause: e });
