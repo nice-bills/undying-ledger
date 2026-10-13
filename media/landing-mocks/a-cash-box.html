@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Undying Ledger · Mock A: the cash box</title>
+<style>
+@font-face{font-family:Archivo;src:url(fonts/archivo-62-125-latin.woff2) format('woff2');font-weight:100 900;font-stretch:62% 125%;font-display:swap}
+@font-face{font-family:'Schibsted Grotesk';src:url(fonts/schibsted-grotesk-normal-400-800-latin.woff2) format('woff2');font-weight:400 800;font-display:swap}
+:root{--emerald:#0E5A43;--emerald-2:#0A4434;--deep:#08372A;--saffron:#F4B23A;--saffron-2:#E59E22;--cream:#FFF3DA;--cream-2:#F3E3C1;--ink:#10261E;--ink2:#4C5F57;--on2:#BFD8CC;--red:#B8391F;
+  --sans:'Schibsted Grotesk',system-ui,sans-serif;--disp:Archivo,'Schibsted Grotesk',sans-serif}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--emerald);color:var(--cream);font:500 17px/1.5 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--saffron);outline-offset:3px;border-radius:8px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+nav{display:flex;align-items:center;justify-content:space-between;height:64px}
+.brand{display:flex;align-items:center;gap:10px;font:800 17px var(--sans);text-decoration:none}
+.brand svg{width:30px;height:30px}
+nav .links{display:flex;gap:18px;font-weight:600;font-size:15px}
+nav .links a{text-decoration:none;padding:12px 0}
+@media (max-width:560px){nav .links .hide-s{display:none}}
+
+/* hero */
+.hero{display:grid;grid-template-columns:1fr;gap:8px;padding:12px 0 36px;min-height:calc(100dvh - 64px);align-content:center}
+@media (min-width:900px){.hero{grid-template-columns:1.15fr .85fr;gap:40px;align-items:center;min-height:auto;padding:56px 0 72px}}
+h1{font:850 clamp(46px,9.6vw,84px)/.92 var(--disp);font-stretch:64%;max-width:12ch;letter-spacing:-.01em;margin:0}
+h1 em{font-style:normal;color:var(--saffron)}
+.sub{font-size:19px;line-height:1.45;color:var(--on2);max-width:34ch;margin:18px 0 26px}
+.cta{display:inline-flex;align-items:center;gap:12px;height:56px;padding:0 26px;border-radius:999px;background:var(--saffron);color:var(--ink);font:800 18px var(--sans);text-decoration:none;transition:transform .12s}
+.cta:active{transform:translateY(1px) scale(.98)}
+.cta .slot{width:22px;height:6px;border-radius:3px;background:var(--ink)}
+.second{margin-left:18px;font-weight:700;color:var(--cream)}
+@media (hover:hover) and (pointer:fine){.cta:hover{background:#F7C05A}.second:hover{color:var(--saffron)}}
+
+.stage{position:relative;justify-self:center;width:min(100%,460px);order:-1;padding-top:58px}
+@media (min-width:900px){.stage{order:0}}
+.stage svg.box{width:100%;height:auto;display:block;overflow:visible}
+.coin{position:absolute;width:30px;height:30px;border-radius:50%;background:var(--saffron);box-shadow:inset 0 -4px 0 var(--saffron-2);left:50%;top:40px;margin-left:-15px;opacity:0}
+.coin::after{content:'';position:absolute;inset:8px;border-radius:50%;border:2px solid var(--saffron-2)}
+.tally{position:absolute;left:0;right:0;top:0;text-align:center;font:850 30px var(--disp);font-stretch:62%;font-variant-numeric:tabular-nums;color:var(--cream)}
+.tally small{font:600 13px var(--sans);display:block;color:var(--on2);letter-spacing:.02em}
+.seal{position:absolute;right:2%;top:84px;width:96px;height:96px;border-radius:50%;background:var(--cream);color:var(--emerald-2);display:grid;place-content:center;text-align:center;transform:rotate(-10deg) scale(0);font:700 11px/1.1 var(--sans)}
+.seal b{display:block;font:900 36px/1 var(--disp);font-stretch:62%}
+.receipt{position:relative;margin:-14px auto 0;width:78%;background:var(--cream);color:var(--ink);border-radius:0 0 14px 14px;padding:14px 16px 12px;clip-path:inset(0 0 100% 0);font-size:14px}
+.receipt .r{display:flex;justify-content:space-between;gap:10px;padding:3px 0}
+.receipt b{font-variant-numeric:tabular-nums}
+.receipt a{font-weight:700;color:var(--emerald)}
+.receipt .t{font:800 12px var(--sans);letter-spacing:.06em;color:var(--ink2);margin-bottom:4px}
+
+/* box art */
+.cb-body{fill:var(--saffron)}.cb-band{fill:var(--saffron-2)}.cb-lid{fill:#F7C05A}.cb-slot{fill:var(--emerald-2)}
+.cb-shackle{fill:none;stroke:var(--emerald-2);stroke-width:7;stroke-linecap:round}
+.cb-lockbody{fill:var(--emerald-2)}.cb-hole{fill:var(--saffron)}
+.cb-handle{fill:none;stroke:var(--saffron-2);stroke-width:9}
+.lid{transform-box:fill-box;transform-origin:8% 100%}
+.shackle{transform-box:fill-box;transform-origin:50% 100%}
+
+/* problem */
+.problem{background:var(--cream);color:var(--ink);border-radius:28px;padding:40px 24px;margin:0 0 20px}
+@media (min-width:900px){.problem{padding:64px}}
+.problem p{font:800 clamp(28px,4.6vw,48px)/1.12 var(--disp);font-stretch:80%;margin:0;max-width:24ch}
+.problem .n{font-stretch:62%;font-size:1.3em;color:var(--red);font-variant-numeric:tabular-nums}
+.problem .src{font:500 14px var(--sans);color:var(--ink2);margin-top:18px}
+
+/* what it does: one row each, a small real action per row */
+.does{display:grid;grid-template-columns:1fr;gap:0;margin:56px 0}
+.row{display:grid;grid-template-columns:84px 1fr;gap:18px;align-items:center;padding:22px 0;border-top:1px solid rgba(255,243,218,.16)}
+.row:last-child{border-bottom:1px solid rgba(255,243,218,.16)}
+.row h3{font:800 24px/1.15 var(--sans);margin:0}
+.row p{margin:4px 0 0;color:var(--on2);max-width:52ch}
+.ic{width:84px;height:64px}
+@media (min-width:900px){.does{grid-template-columns:1fr 1fr;column-gap:56px}.row:nth-last-child(2){border-bottom:1px solid rgba(255,243,218,.16)}}
+
+/* proof */
+.proof{display:grid;gap:18px;padding:40px 0 64px}
+@media (min-width:900px){.proof{grid-template-columns:.8fr 1.2fr;align-items:end}}
+.proof h2{font:850 clamp(36px,6vw,64px)/.95 var(--disp);font-stretch:66%;margin:0}
+.big{font:900 clamp(96px,16vw,168px)/.8 var(--disp);font-stretch:62%;color:var(--saffron);font-variant-numeric:tabular-nums}
+.tx{list-style:none;margin:0;padding:0;font-size:15px}
+.tx li{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:10px 0;border-bottom:1px solid rgba(255,243,218,.16)}
+.tx li code{grid-column:1;grid-row:2;color:var(--on2)}.tx li a{grid-row:1/3;grid-column:2;align-self:center;white-space:nowrap}
+.tx code{font:600 14px var(--sans);font-variant-numeric:tabular-nums}
+.tx a{color:var(--saffron);font-weight:700}
+footer{background:var(--deep);padding:28px 0 40px;font-size:15px;color:var(--on2)}
+footer .wrap{display:flex;flex-wrap:wrap;gap:14px 24px;justify-content:space-between}
+footer nav{height:auto;gap:20px;display:flex;flex-wrap:wrap}
+footer a{text-decoration:none;font-weight:600;color:var(--cream);padding:10px 0}
+.reveal{opacity:0;transform:translateY(18px)}
+@media (prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none}.receipt{clip-path:none}.seal{transform:rotate(-10deg)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <a class="brand" href="#"><svg viewBox="0 0 30 30" aria-hidden="true"><rect x="2" y="9" width="26" height="18" rx="4" fill="#F4B23A"/><rect x="2" y="6" width="26" height="6" rx="3" fill="#F7C05A"/><rect x="11" y="8" width="8" height="2" rx="1" fill="#0A4434"/><rect x="12" y="15" width="6" height="7" rx="1.5" fill="#0A4434"/></svg>Undying Ledger</a>
+    <div class="links"><a href="#proof" class="hide-s">On Preprod</a><a href="#">GitHub</a></div>
+  </nav>
+
+  <section class="hero">
+    <div>
+      <h1>The group’s book <em>outlives</em> the grant.</h1>
+      <p class="sub">A savings group’s record book on Midnight. Private passbooks, no fees for members, and no vendor to switch it off.</p>
+      <a class="cta" href="#">Open the demo <span class="slot" aria-hidden="true"></span></a>
+      <a class="second" href="#">Watch 54 s</a>
+    </div>
+    <div class="stage" aria-label="A cash box takes meeting 12’s coins, locks, and prints its receipt">
+      <div class="tally" aria-hidden="true"><span id="tally">GH¢0</span><small>meeting 12, counted in</small></div>
+      <svg class="box" viewBox="0 0 330 230" aria-hidden="true">
+        <rect class="cb-handle" x="128" y="22" width="74" height="22" rx="8"/>
+        <rect class="cb-body" x="22" y="70" width="286" height="140" rx="12"/>
+        <rect class="cb-band" x="22" y="86" width="286" height="10"/>
+        <g id="locks">
+          <g transform="translate(64,118)"><path class="cb-shackle shackle" d="M8 4v-14a12 12 0 0 1 24 0V4" style="transform:translateY(-9px) rotate(-14deg)"/><rect class="cb-lockbody" width="40" height="46" rx="7"/><circle class="cb-hole" cx="20" cy="20" r="5"/><rect class="cb-hole" x="18" y="22" width="4" height="11" rx="1"/></g>
+          <g transform="translate(145,118)"><path class="cb-shackle shackle" d="M8 4v-14a12 12 0 0 1 24 0V4" style="transform:translateY(-9px) rotate(-14deg)"/><rect class="cb-lockbody" width="40" height="46" rx="7"/><circle class="cb-hole" cx="20" cy="20" r="5"/><rect class="cb-hole" x="18" y="22" width="4" height="11" rx="1"/></g>
+          <g transform="translate(226,118)"><path class="cb-shackle shackle" d="M8 4v-14a12 12 0 0 1 24 0V4" style="transform:translateY(-9px) rotate(-14deg)"/><rect class="cb-lockbody" width="40" height="46" rx="7"/><circle class="cb-hole" cx="20" cy="20" r="5"/><rect class="cb-hole" x="18" y="22" width="4" height="11" rx="1"/></g>
+        </g>
+        <g class="lid" id="lid" style="transform:rotate(-14deg)"><rect class="cb-lid" x="14" y="48" width="302" height="34" rx="10"/><rect class="cb-slot" x="138" y="58" width="54" height="9" rx="4.5"/></g>
+      </svg>
+      <div class="seal" id="seal" aria-hidden="true"><span>KPALSI</span><b>12</b><span>sealed</span></div>
+      <div class="receipt" id="receipt">
+        <div class="t">RECEIPT, MEETING 12</div>
+        <div class="r"><span>Fee</span><b>1 SPECK</b></div>
+        <div class="r"><span>Paid by</span><b>the group fee key</b></div>
+        <div class="r"><span>Members paid</span><b>nothing</b></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="problem reveal">
+    <p>When the grant ends, the app costs <span class="n">$10</span> a month a group. Three months later, <span class="n" data-count="15">15</span>% are still recording.</p>
+    <div class="src">hiveonline pricing; Jamii.one, Kenya, 708 groups. Sources in the README.</div>
+  </section>
+
+  <section class="does">
+    <div class="row reveal"><svg class="ic" viewBox="0 0 84 64" aria-hidden="true"><rect x="22" y="26" width="40" height="34" rx="7" fill="#F4B23A"/><path class="ic-shackle" d="M30 26v-8a12 12 0 0 1 24 0v8" fill="none" stroke="#F4B23A" stroke-width="7" stroke-linecap="round" style="transform-box:fill-box;transform-origin:0% 100%"/><circle cx="42" cy="40" r="4" fill="#0E5A43"/></svg><div><h3>Her passbook opens on her phone only.</h3><p>Amounts never go on chain. Her husband’s phone sees a sealed line.</p></div></div>
+    <div class="row reveal"><svg class="ic" viewBox="0 0 84 64" aria-hidden="true"><rect x="8" y="24" width="68" height="16" rx="8" fill="rgba(255,243,218,.16)"/><rect class="ic-tank" x="8" y="24" width="68" height="16" rx="8" fill="#F4B23A" style="transform-box:fill-box;transform-origin:0 50%"/></svg><div><h3>The group pays the fee. Members hold nothing.</h3><p>One shared fee key, endowed once by the NGO. 1 SPECK a call on Preprod.</p></div></div>
+    <div class="row reveal"><svg class="ic" viewBox="0 0 84 64" aria-hidden="true"><g class="ic-vendor" style="transform-box:fill-box;transform-origin:50% 0"><path d="M32 22v-6a10 10 0 0 1 20 0v6" fill="none" stroke="#B8391F" stroke-width="6"/><rect x="28" y="22" width="28" height="26" rx="5" fill="#B8391F"/><text x="42" y="41" text-anchor="middle" font-family="Archivo" font-weight="900" font-size="15" fill="#FFF3DA">V</text></g></svg><div><h3>When the vendor goes, the book keeps going.</h3><p>Anyone can call sunset after the grace period. Admin powers end for good.</p></div></div>
+    <div class="row reveal"><svg class="ic" viewBox="0 0 84 64" aria-hidden="true"><g class="ic-votes"><circle cx="22" cy="32" r="9" fill="#F4B23A"/><circle cx="42" cy="32" r="9" fill="#F4B23A"/><circle cx="62" cy="32" r="9" fill="rgba(255,243,218,.2)"/></g></svg><div><h3>Lost the secretary’s phone? Members vote.</h3><p>More than half of the group elects a new one, even after sunset.</p></div></div>
+  </section>
+
+  <section class="proof reveal" id="proof">
+    <div><div class="big" id="zero">0</div><h2>DUST in members’ wallets. Ran on Midnight Preprod.</h2></div>
+    <ul class="tx">
+      <li><span>recordMeeting</span><code>60128464…3833a2</code><a href="#">1 SPECK</a></li>
+      <li><span>sunset</span><code>787bc763…14e15e</code><a href="#">1 SPECK</a></li>
+      <li><span>voteSecretary, elected</span><code>ddaa692e…0d859a</code><a href="#">1 SPECK</a></li>
+      <li><span>attestSavings, from a browser</span><code>761e7bc2…c9246e</code><a href="#">1 SPECK</a></li>
+    </ul>
+  </section>
+</div>
+<footer><div class="wrap"><span>Built for the AKINDO Midnight Buildathon. Apache-2.0.</span><nav><a href="#">GitHub</a><a href="#">Video</a><a href="#">Terms</a><a href="#">Privacy</a></nav></div></footer>
+
+<script>
+const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $ = (s) => document.querySelector(s);
+const anim = (el, k, o) => el ? el.animate(k, { fill: 'forwards', easing: 'cubic-bezier(.2,.8,.2,1)', ...o }).finished : Promise.resolve();
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+async function meeting() {
+  if (RM) { $('#tally').textContent = 'GH¢120'; return; }
+  const stage = $('.stage');
+  const shares = [3, 2, 4, 1, 2];
+  let total = 0;
+  await wait(500);
+  for (const n of shares) {
+    const c = document.createElement('i'); c.className = 'coin'; stage.appendChild(c);
+    const x = (Math.random() - .5) * 60;
+    await anim(c, [{ opacity: 0, transform: `translate(${x}px,-40px) scale(.9)` }, { opacity: 1, offset: .2 }, { opacity: 1, transform: 'translate(0,92px) scale(1)', offset: .85 }, { opacity: 0, transform: 'translate(0,108px) scale(.6)' }], { duration: 560, easing: 'cubic-bezier(.5,0,.75,0)' });
+    c.remove();
+    total += n * 10;
+    $('#tally').textContent = 'GH¢' + total;
+    anim($('#tally'), [{ transform: 'scale(1.12)' }, { transform: 'scale(1)' }], { duration: 220, fill: 'none' });
+  }
+  // the lid comes down, then each padlock clicks shut
+  await anim($('#lid'), [{ transform: 'rotate(-14deg)' }, { transform: 'rotate(2deg)', offset: .8 }, { transform: 'rotate(0)' }], { duration: 420 });
+  for (const s of document.querySelectorAll('#locks .shackle')) {
+    await anim(s, [{ transform: 'translateY(-9px) rotate(-14deg)' }, { transform: 'translateY(2px) rotate(0)', offset: .7 }, { transform: 'translateY(0) rotate(0)' }], { duration: 200 });
+    await wait(60);
+  }
+  await anim($('#seal'), [{ transform: 'rotate(-30deg) scale(1.6)', opacity: 0 }, { transform: 'rotate(-8deg) scale(.92)', opacity: 1, offset: .7 }, { transform: 'rotate(-10deg) scale(1)', opacity: 1 }], { duration: 380 });
+  // the receipt feeds out under the box
+  await anim($('#receipt'), [{ clipPath: 'inset(0 0 100% 0)', transform: 'translateY(-20px)' }, { clipPath: 'inset(0 0 0 0)', transform: 'translateY(0)' }], { duration: 700, easing: 'steps(14,end)' });
+}
+meeting();
+
+// below the hero: each row plays its own small real action when it comes into view
+const io = new IntersectionObserver((es) => es.forEach((e) => {
+  if (!e.isIntersecting) return; io.unobserve(e.target);
+  const t = e.target;
+  if (!RM) anim(t, [{ opacity: 0, transform: 'translateY(18px)' }, { opacity: 1, transform: 'none' }], { duration: 520 });
+  else t.style.opacity = 1;
+  if (RM) return;
+  const sh = t.querySelector('.ic-shackle'); if (sh) setTimeout(() => anim(sh, [{ transform: 'none' }, { transform: 'translateY(-6px) rotate(-22deg)' }], { duration: 420 }), 450);
+  const tk = t.querySelector('.ic-tank'); if (tk) setTimeout(() => anim(tk, [{ transform: 'scaleX(1)' }, { transform: 'scaleX(.94)' }], { duration: 700 }), 450);
+  const v = t.querySelector('.ic-vendor'); if (v) setTimeout(() => anim(v, [{ transform: 'none', opacity: 1 }, { transform: 'translateY(4px) rotate(12deg)', offset: .3 }, { transform: 'translateY(40px) rotate(28deg)', opacity: 0 }], { duration: 760, easing: 'cubic-bezier(.5,0,.8,.5)' }), 450);
+  const vs = t.querySelector('.ic-votes circle:nth-child(3)'); if (vs) setTimeout(() => anim(vs, [{ fill: 'rgba(255,243,218,.2)', transform: 'scale(.6)' }, { fill: '#F4B23A', transform: 'scale(1)' }], { duration: 420 }), 650);
+  const z = t.querySelector('#zero'); if (z) anim(z, [{ transform: 'translateY(30px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 600 });
+}), { threshold: .35 });
+document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
+</script>
+</body>
+</html>

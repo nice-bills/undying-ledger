@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Undying Ledger · Mock C: her passbook</title>
+<style>
+@font-face{font-family:Archivo;src:url(fonts/archivo-62-125-latin.woff2) format('woff2');font-weight:100 900;font-stretch:62% 125%;font-display:swap}
+@font-face{font-family:'Schibsted Grotesk';src:url(fonts/schibsted-grotesk-normal-400-800-latin.woff2) format('woff2');font-weight:400 800;font-display:swap}
+:root{--emerald:#0E5A43;--emerald-2:#0A4434;--saffron:#F4B23A;--saffron-2:#E59E22;--cream:#FFF3DA;--cream-2:#F3E3C1;--ink:#1B1A15;--ink2:#4A3912;--slate:#3E4945;--red:#B8391F;
+  --sans:'Schibsted Grotesk',system-ui,sans-serif;--disp:Archivo,'Schibsted Grotesk',sans-serif}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--saffron);color:var(--ink);font:500 17px/1.5 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--ink);outline-offset:3px;border-radius:8px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+nav{display:flex;align-items:center;justify-content:space-between;height:64px}
+.brand{font:800 17px var(--sans);text-decoration:none}
+nav a.gh{font-weight:700;text-decoration:none;padding:12px 0}
+
+.hero{display:grid;grid-template-columns:1fr;gap:20px;padding:8px 0 40px}
+@media (min-width:900px){.hero{grid-template-columns:1fr 1fr;gap:40px;align-items:center;padding:48px 0 80px}}
+h1{font:850 clamp(48px,10vw,84px)/.9 var(--disp);font-stretch:62%;margin:0;letter-spacing:-.01em}
+.sub{font-size:19px;color:var(--ink2);max-width:33ch;margin:18px 0 24px}
+.cta{display:inline-flex;align-items:center;height:56px;padding:0 26px;border-radius:999px;background:var(--emerald);color:var(--cream);font:800 18px var(--sans);text-decoration:none;transition:transform .12s}
+.cta:active{transform:translateY(1px) scale(.98)}
+.second{margin-left:18px;font-weight:700}
+@media (hover:hover) and (pointer:fine){.cta:hover{background:var(--emerald-2)}.second:hover{text-decoration-thickness:3px}}
+
+/* two phones: a real mini version of the app's screens */
+.phones{position:relative;height:420px;order:-1;overflow-x:clip;margin:0 -20px}
+@media (min-width:900px){.phones{order:0;height:540px;margin:0;overflow:visible}}
+.phone{position:absolute;width:212px;height:380px;border-radius:34px;padding:12px;background:var(--ink)}
+@media (min-width:900px){.phone{width:258px;height:460px}}
+.screen{height:100%;border-radius:24px;overflow:hidden;padding:16px 14px;display:flex;flex-direction:column}
+.hers{left:50%;margin-left:-160px;top:18px;transform:rotate(-4deg);z-index:2}
+.his{left:50%;margin-left:-30px;top:4px;transform:rotate(7deg)}
+@media (min-width:900px){.hers{margin-left:-210px}.his{margin-left:-10px;top:40px}}
+.hers .screen{background:var(--emerald);color:var(--cream)}
+.his .screen{background:var(--slate);color:#F2ECDD}
+.who{font:600 12px var(--sans);opacity:.85}
+.who b{font-weight:800}
+.lbl{font:700 11px var(--sans);letter-spacing:.06em;opacity:.8;margin-top:14px}
+.shares{font:900 104px/.85 var(--disp);font-stretch:62%;font-variant-numeric:tabular-nums;margin-top:6px;color:var(--saffron)}
+.shares small{font:700 14px var(--sans);color:var(--cream);margin-left:6px}
+.book{margin-top:auto;background:var(--cream);color:var(--emerald-2);border-radius:14px;padding:10px 12px;font-size:11.5px;position:relative}
+@media (min-width:900px){.book{font-size:12.5px}}
+.book .ln{display:flex;justify-content:space-between;gap:8px;padding:3px 0;font-variant-numeric:tabular-nums;white-space:nowrap}
+.book .ln.new{font-weight:800}
+.stamp{position:absolute;right:-8px;top:-30px;width:74px;height:74px;border-radius:50%;background:var(--red);color:var(--cream);display:grid;place-content:center;text-align:center;font:700 9px/1.1 var(--sans);transform:rotate(-12deg) scale(0)}
+.stamp b{display:block;font:900 26px/1 var(--disp);font-stretch:62%}
+.dots{display:flex;gap:10px;justify-content:center;margin:46px 0 10px}
+.dots i{width:16px;height:16px;border-radius:50%;background:#F2ECDD;opacity:.9}
+.his .msg{text-align:center;font-size:13px;opacity:.9}
+.his .msg b{display:block;font:800 15px var(--sans);opacity:1;margin-bottom:2px}
+.sealed{margin-top:auto;font:600 11px/1.4 var(--sans);opacity:.75;word-break:break-all}
+
+/* the proof slip rises out of a slot */
+.slipzone{background:var(--cream);border-radius:28px;padding:40px 24px 0;display:grid;gap:20px;overflow:hidden}
+@media (min-width:900px){.slipzone{grid-template-columns:1fr 1fr;padding:64px 64px 0;align-items:end}}
+.slipzone h2{font:850 clamp(36px,6vw,64px)/.95 var(--disp);font-stretch:66%;margin:0 0 12px}
+.slipzone p{color:var(--ink2);max-width:36ch;margin:0 0 40px}
+.slotwrap{position:relative;height:250px;display:flex;justify-content:center;align-items:flex-end}
+.slot{position:absolute;bottom:0;left:50%;width:240px;margin-left:-120px;height:34px;background:var(--emerald);border-radius:12px 12px 0 0}
+.slip{position:relative;bottom:20px;width:200px;background:#fff8e8;border-radius:12px 12px 0 0;padding:16px 16px 28px;color:var(--emerald-2);transform:translateY(100%)}
+.slip .k{font:700 11px var(--sans);letter-spacing:.05em;padding-right:44px}
+.slip .v{font:900 40px/1 var(--disp);font-stretch:62%;margin:6px 0}
+.slip .r{font-size:12px;color:#4C5F57}
+.ok{position:absolute;right:-14px;top:-14px;width:60px;height:60px;border-radius:50%;background:var(--emerald);color:var(--cream);display:grid;place-content:center;font:800 10px var(--sans);transform:rotate(10deg) scale(0)}
+
+/* one marquee: the real Preprod transactions */
+.ticker{margin:44px 0;overflow:hidden;border-block:2px solid var(--ink);padding:14px 0;white-space:nowrap}
+.track{display:inline-flex;gap:40px;animation:tick 38s linear infinite;font:800 18px var(--sans)}
+.track span{font-variant-numeric:tabular-nums}
+.track em{font-style:normal;font-weight:600;color:var(--ink2)}
+@keyframes tick{to{transform:translateX(-50%)}}
+.nobody{display:grid;gap:12px;padding:8px 0 56px}
+@media (min-width:900px){.nobody{grid-template-columns:auto 1fr;gap:40px;align-items:center}}
+.nobody .big{font:900 clamp(120px,22vw,220px)/.78 var(--disp);font-stretch:62%;color:var(--emerald)}
+.nobody p{font:800 clamp(24px,3.4vw,36px)/1.15 var(--sans);margin:0;max-width:26ch}
+.nobody small{display:block;font:500 15px var(--sans);color:var(--ink2);margin-top:10px}
+footer{background:var(--ink);color:#E8DCC0;padding:26px 0 40px;font-size:15px}
+footer .wrap{display:flex;flex-wrap:wrap;gap:12px 24px;justify-content:space-between}
+footer a{text-decoration:none;font-weight:600;color:var(--cream);padding:10px 0;margin-right:18px}
+@media (prefers-reduced-motion:reduce){.track{animation:none}.slip{transform:none}.stamp{transform:rotate(-12deg)}.ok{transform:rotate(10deg)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav><a class="brand" href="#">Undying Ledger</a><a class="gh" href="#">GitHub</a></nav>
+  <section class="hero">
+    <div>
+      <h1>Her savings. Her phone. Nobody else’s book.</h1>
+      <p class="sub">A savings group’s record book on Midnight. Private by default, free for members, and it keeps going after the grant.</p>
+      <a class="cta" href="#">Open the demo</a><a class="second" href="#">Watch 54 s</a>
+    </div>
+    <div class="phones" aria-label="Ama’s phone opens her passbook; her husband’s phone cannot">
+      <div class="phone his" id="his"><div class="screen">
+        <div class="who"><b>Kofi</b>’s phone</div>
+        <div class="lbl">KPALSI WOMEN’S GROUP, SLOT 0</div>
+        <div class="dots" id="dots"><i></i><i></i><i></i><i></i></div>
+        <div class="msg" id="msg"><b>Can’t open</b>The book is sealed without the group secret.</div>
+        <div class="sealed">sealed line 0x6f1c…e2a9</div>
+      </div></div>
+      <div class="phone hers"><div class="screen">
+        <div class="who"><b>Ama</b>’s phone</div>
+        <div class="lbl">MY SHARES</div>
+        <div class="shares"><span id="sh">26</span><small>GH¢<span id="ghs">260</span></small></div>
+        <div class="book">
+          <div class="stamp" id="stamp"><span>MEETING</span><b>12</b><span>sealed</span></div>
+          <div class="ln"><span>Meeting 11</span><span>+2</span></div>
+          <div class="ln new" id="l12" style="opacity:0"><span>Meeting 12</span><span>+3, loan paid</span></div>
+        </div>
+      </div></div>
+    </div>
+  </section>
+
+  <section class="slipzone">
+    <div>
+      <h2>Prove it. Keep the amount.</h2>
+      <p>For a loan, Ama proves “at least 30 shares”. The lender sees that sentence and nothing else.</p>
+    </div>
+    <div class="slotwrap"><div class="slip" id="slip"><div class="k">KPALSI WOMEN’S GROUP CERTIFIES</div><div class="v">At least 30 shares</div><div class="r">Her total stays on her phone.</div><div class="ok" id="ok">PROOF</div></div><div class="slot"></div></div>
+  </section>
+
+  <div class="ticker" aria-label="Transactions on Midnight Preprod"><div class="track">
+    <span>recordMeeting <em>60128464…3833a2 · 1 SPECK</em></span><span>attestSavings <em>08a24610…60e8af · 1 SPECK</em></span><span>sunset <em>787bc763…14e15e · 1 SPECK</em></span><span>voteSecretary, elected <em>ddaa692e…0d859a · 1 SPECK</em></span><span>from a browser, no wallet <em>761e7bc2…c9246e · 1 SPECK</em></span>
+    <span aria-hidden="true">recordMeeting <em>60128464…3833a2 · 1 SPECK</em></span><span aria-hidden="true">attestSavings <em>08a24610…60e8af · 1 SPECK</em></span><span aria-hidden="true">sunset <em>787bc763…14e15e · 1 SPECK</em></span><span aria-hidden="true">voteSecretary, elected <em>ddaa692e…0d859a · 1 SPECK</em></span><span aria-hidden="true">from a browser, no wallet <em>761e7bc2…c9246e · 1 SPECK</em></span>
+  </div></div>
+
+  <section class="nobody">
+    <div class="big">0</div>
+    <p>tokens in any member’s wallet. The group’s shared fee key pays, and nobody can switch the book off.<small>Ran on Midnight Preprod, October 2026. <a href="#">See every transaction</a></small></p>
+  </section>
+</div>
+<footer><div class="wrap"><span>AKINDO Midnight Buildathon. Apache-2.0.</span><span><a href="#">Video</a><a href="#">Terms</a><a href="#">Privacy</a></span></div></footer>
+<script>
+const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $ = (s) => document.querySelector(s);
+const anim = (el, k, o) => (RM || !el) ? Promise.resolve() : el.animate(k, { fill: 'forwards', easing: 'cubic-bezier(.2,.8,.2,1)', ...o }).finished;
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const count = (el, from, to, ms) => new Promise((r) => { if (RM) { el.textContent = to; return r(); } const t0 = performance.now(); const f = (t) => { const k = Math.min(1, (t - t0) / ms); el.textContent = Math.round(from + (to - from) * (1 - Math.pow(1 - k, 3))); k < 1 ? requestAnimationFrame(f) : r(); }; requestAnimationFrame(f); });
+async function hero() {
+  if (RM) { $('#sh').textContent = 29; $('#ghs').textContent = 290; $('#l12').style.opacity = 1; return; }
+  await wait(700);
+  // the secretary's stamp lands on line 12, then her total rolls up
+  await anim($('#stamp'), [{ transform: 'rotate(-30deg) scale(1.8)', opacity: 0 }, { transform: 'rotate(-10deg) scale(.88)', opacity: 1, offset: .65 }, { transform: 'rotate(-12deg) scale(1)', opacity: 1 }], { duration: 360 });
+  anim($('.hers'), [{ transform: 'rotate(-4deg)' }, { transform: 'rotate(-4deg) translateY(4px)' }, { transform: 'rotate(-4deg)' }], { duration: 180, fill: 'none' });
+  anim($('#l12'), [{ opacity: 0, transform: 'translateX(-10px)' }, { opacity: 1, transform: 'none' }], { duration: 300 });
+  await Promise.all([count($('#sh'), 26, 29, 700), count($('#ghs'), 260, 290, 700)]);
+  await wait(500);
+  // her husband tries the same slot: the dots rattle and stay shut
+  for (let i = 0; i < 2; i++) {
+    await anim($('#dots'), [{ transform: 'translateX(0)' }, { transform: 'translateX(-9px)' }, { transform: 'translateX(9px)' }, { transform: 'translateX(-6px)' }, { transform: 'translateX(0)' }], { duration: 380, fill: 'none' });
+    await wait(220);
+  }
+  anim($('#msg'), [{ opacity: .4 }, { opacity: 1 }], { duration: 300 });
+}
+hero();
+const io = new IntersectionObserver((es) => es.forEach(async (e) => {
+  if (!e.isIntersecting) return; io.unobserve(e.target);
+  await anim($('#slip'), [{ transform: 'translateY(100%)' }, { transform: 'translateY(0)' }], { duration: 900, easing: 'cubic-bezier(.2,.9,.3,1)' });
+  anim($('#ok'), [{ transform: 'rotate(30deg) scale(1.6)', opacity: 0 }, { transform: 'rotate(8deg) scale(.9)', opacity: 1, offset: .7 }, { transform: 'rotate(10deg) scale(1)', opacity: 1 }], { duration: 360 });
+}), { threshold: .5 });
+io.observe($('.slipzone'));
+</script>
+</body>
+</html>

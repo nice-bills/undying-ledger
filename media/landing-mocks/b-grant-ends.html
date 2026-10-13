@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Undying Ledger · Mock B: the grant ends</title>
+<style>
+@font-face{font-family:Archivo;src:url(fonts/archivo-62-125-latin.woff2) format('woff2');font-weight:100 900;font-stretch:62% 125%;font-display:swap}
+@font-face{font-family:'Schibsted Grotesk';src:url(fonts/schibsted-grotesk-normal-400-800-latin.woff2) format('woff2');font-weight:400 800;font-display:swap}
+:root{--emerald:#0E5A43;--emerald-2:#0A4434;--saffron:#F4B23A;--saffron-2:#E59E22;--cream:#FFF3DA;--ink:#10261E;--red:#B8391F;
+  --sans:'Schibsted Grotesk',system-ui,sans-serif;--disp:Archivo,'Schibsted Grotesk',sans-serif;
+  --bg:#F4B23A;--on:#1B1A15;--on2:#4A3912;--box:#0E5A43;--lid:#0A4434;--lock:#F4B23A}
+/* the one deliberate theme change: the light goes out when the grant ends, and comes back green */
+body[data-scene="1"]{--bg:#3E4945;--on:#F2ECDD;--on2:#C9C2B1;--box:#6F7B75;--lid:#5C6862;--lock:#2A3431}
+body[data-scene="2"],body[data-scene="3"]{--bg:#0E5A43;--on:#FFF3DA;--on2:#BFD8CC;--box:#F4B23A;--lid:#E59E22;--lock:#0A4434}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--on);font:500 17px/1.5 var(--sans);-webkit-font-smoothing:antialiased;transition:background-color .8s,color .8s}
+a{color:inherit}
+:focus-visible{outline:3px solid currentColor;outline-offset:3px;border-radius:8px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+nav{display:flex;align-items:center;justify-content:space-between;height:64px;position:relative;z-index:3}
+.brand{font:800 17px var(--sans);text-decoration:none}
+nav a.gh{font-weight:700;text-decoration:none;padding:12px 0}
+
+.story{display:grid;grid-template-columns:1fr;position:relative}
+@media (min-width:900px){.story{grid-template-columns:1fr 1fr;gap:48px}}
+.stagecol{position:sticky;top:0;height:40dvh;display:grid;place-items:center;z-index:2;background:var(--bg);transition:background-color .8s}
+@media (min-width:900px){.stagecol{top:64px;height:calc(100dvh - 64px);order:2;background:transparent}}
+.step:last-child{padding-bottom:22dvh}
+@media (min-width:900px){.step:last-child{padding-bottom:0}}
+.stagecol svg{width:min(88%,440px);height:auto;overflow:visible}
+.box-body{fill:var(--box);transition:fill .8s}.box-band,.box-lid{fill:var(--lid);transition:fill .8s}
+.lk rect{fill:var(--lock);transition:fill .8s}.lk path{stroke:var(--lock);transition:stroke .8s}
+.lk path{fill:none;stroke-width:7;stroke-linecap:round}
+.lk circle{fill:var(--box);transition:fill .8s}
+.vendor rect{fill:var(--red)}.vendor path{fill:none;stroke:var(--red);stroke-width:6}
+.tag{font:800 14px var(--sans)}
+.tag rect{fill:var(--cream)}.tag text{fill:var(--ink);font-family:'Schibsted Grotesk';font-weight:800}
+.coin{fill:var(--saffron)}
+.seal circle{fill:var(--cream)}.seal text{fill:var(--emerald-2)}
+
+.steps{position:relative;z-index:1}
+.step{min-height:78dvh;display:flex;flex-direction:column;justify-content:center;padding:28px 0}
+.step:first-child{min-height:calc(100dvh - 64px - 40dvh);justify-content:flex-start;padding-top:8px}
+@media (min-width:900px){.step{min-height:100dvh}.step:first-child{min-height:calc(100dvh - 64px);justify-content:center}}
+h1,h2{font:850 clamp(44px,8.8vw,76px)/.92 var(--disp);font-stretch:66%;margin:0;letter-spacing:-.01em}
+h2{font-size:clamp(38px,7vw,72px)}
+.step p{font-size:19px;max-width:34ch;color:var(--on2);margin:16px 0 0;transition:color .8s}
+.n{font-stretch:62%;font-variant-numeric:tabular-nums}
+.cta{display:inline-flex;align-items:center;height:56px;padding:0 26px;border-radius:999px;background:var(--on);color:var(--bg);font:800 18px var(--sans);text-decoration:none;margin-top:26px;width:max-content;transition:transform .12s,background-color .8s,color .8s}
+.cta:active{transform:translateY(1px) scale(.98)}
+.proof{margin-top:22px;font-size:15px;color:var(--on2)}
+.proof a{font-weight:700;color:var(--on)}
+footer{padding:28px 0 40px;font-size:15px;color:var(--on2);background:var(--bg);transition:background-color .8s}
+footer .wrap{display:flex;flex-wrap:wrap;gap:12px 24px;justify-content:space-between}
+footer a{text-decoration:none;font-weight:600;color:var(--on);padding:10px 0;margin-right:18px}
+@media (prefers-reduced-motion:reduce){body,.stagecol,.box-body,.box-band,.box-lid{transition:none}}
+</style>
+</head>
+<body data-scene="0">
+<div class="wrap">
+  <nav><a class="brand" href="#">Undying Ledger</a><a class="gh" href="#">GitHub</a></nav>
+  <div class="story">
+    <div class="stagecol" aria-hidden="true">
+      <svg viewBox="0 0 340 250">
+        <rect x="128" y="28" width="74" height="22" rx="8" fill="none" stroke="var(--lid)" stroke-width="9"/>
+        <rect class="box-body" x="22" y="76" width="286" height="140" rx="12"/>
+        <rect class="box-band" x="22" y="92" width="286" height="10"/>
+        <g class="lk" id="lk0" transform="translate(64,124)"><path class="sh" d="M8 4v-14a12 12 0 0 1 24 0V4"/><rect width="40" height="46" rx="7"/><circle cx="20" cy="20" r="5"/></g>
+        <g class="lk" id="lk1" transform="translate(145,124)"><path class="sh" d="M8 4v-14a12 12 0 0 1 24 0V4"/><rect width="40" height="46" rx="7"/><circle cx="20" cy="20" r="5"/></g>
+        <g class="lk" id="lk2" transform="translate(226,124)"><path class="sh" d="M8 4v-14a12 12 0 0 1 24 0V4"/><rect width="40" height="46" rx="7"/><circle cx="20" cy="20" r="5"/></g>
+        <g class="vendor" id="vendor" style="transform-box:fill-box;transform-origin:50% 0"><rect x="300" y="128" width="16" height="30" rx="3" fill="#7a2a19"/><g transform="translate(294,160)"><path d="M6 2v-9a10 10 0 0 1 20 0v9"/><rect width="32" height="34" rx="5"/><text x="16" y="23" text-anchor="middle" font-family="Archivo" font-weight="900" font-size="17" fill="#FFF3DA">V</text></g></g>
+        <rect class="box-lid" x="14" y="54" width="302" height="34" rx="10"/>
+        <rect x="138" y="64" width="54" height="9" rx="4.5" fill="#10261E" opacity=".55"/>
+        <g class="tag" id="tag" style="transform-box:fill-box;transform-origin:0% 0%">
+          <path d="M200 34 L232 10" stroke="var(--on)" stroke-width="2.5"/>
+          <rect x="226" y="2" width="80" height="34" rx="8"/><text x="266" y="25" text-anchor="middle" font-size="15">$10/mo</text>
+        </g>
+        <circle class="coin" id="coin" cx="165" cy="-20" r="13" opacity="0"/>
+        <g class="seal" id="seal" style="transform-box:fill-box;transform-origin:50% 50%"><circle cx="292" cy="40" r="44"/><text x="292" y="32" text-anchor="middle" font-family="Schibsted Grotesk" font-weight="700" font-size="8">NO VENDOR</text><text x="292" y="62" text-anchor="middle" font-family="Archivo" font-weight="900" font-size="34" style="font-stretch:62%">13</text></g>
+      </svg>
+    </div>
+    <div class="steps">
+      <section class="step" data-s="0">
+        <h1>An NGO pays for the app. Then the grant ends.</h1>
+        <p>Savings groups keep their book in a tin box and, lately, an app. The app has a monthly bill.</p>
+      </section>
+      <section class="step" data-s="1">
+        <h2>The bill arrives. The book goes quiet.</h2>
+        <p>After donor money ended in Kenya, <b class="n">15</b> in <b class="n">100</b> groups were still recording three months later.</p>
+      </section>
+      <section class="step" data-s="2">
+        <h2>On Midnight, nobody can switch it off.</h2>
+        <p>When the vendor stops checking in, any member calls sunset. The vendor’s lock comes off and the group keeps recording. Fees come from a shared group key, so members pay nothing.</p>
+      </section>
+      <section class="step" data-s="3">
+        <h2>And her passbook opens only on her phone.</h2>
+        <p>Amounts never go on chain. She can prove “at least 30 shares” to a lender without showing the rest.</p>
+        <a class="cta" href="#">Open the demo</a>
+        <p class="proof">Ran on Midnight Preprod: 14 member calls with 0 DUST in their wallets. <a href="#">See the transactions</a></p>
+      </section>
+    </div>
+  </div>
+</div>
+<footer><div class="wrap"><span>AKINDO Midnight Buildathon. Apache-2.0.</span><span><a href="#">Video</a><a href="#">Terms</a><a href="#">Privacy</a></span></div></footer>
+<script>
+const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $ = (s) => document.querySelector(s);
+const anim = (el, k, o) => (RM || !el) ? Promise.resolve() : el.animate(k, { fill: 'forwards', easing: 'cubic-bezier(.2,.8,.2,1)', ...o }).finished;
+let scene = -1;
+const OPEN = 'translateY(-8px) rotate(-14deg)';
+// the still picture of each scene, used when scrolling back up (and with reduced motion)
+const still = (s) => {
+  document.querySelectorAll('svg *').forEach((el) => el.getAnimations().forEach((a) => a.cancel()));
+  $('#tag').style.transform = s >= 1 ? 'translateY(160px) rotate(40deg)' : 'none';
+  $('#tag').style.opacity = s >= 1 ? 0 : 1;
+  $('#vendor').style.transform = s >= 2 ? 'translateY(120px) rotate(60deg)' : 'none';
+  $('#vendor').style.opacity = s >= 2 ? 0 : 1;
+  document.querySelectorAll('.sh').forEach((p, i) => (p.style.transform = s === 1 || (s === 3 && i === 0) ? OPEN : 'none'));
+  $('#seal').style.opacity = s >= 2 ? 1 : 0;
+  $('#seal').style.transform = 'rotate(-10deg)';
+};
+const enter = async (s) => {
+  if (s === scene) return;
+  const back = s < scene;
+  scene = s;
+  document.body.dataset.scene = String(s);
+  if (back || RM) return still(s);
+  still(s - 1 < 0 ? 0 : s - 1);
+  if (s === 0) {
+    // the bill tag swings on the box: someone is paying every month
+    anim($('#tag'), [{ transform: 'rotate(-8deg)' }, { transform: 'rotate(7deg)' }, { transform: 'rotate(-4deg)' }, { transform: 'rotate(0)' }], { duration: 1400, easing: 'ease-in-out' });
+  }
+  if (s === 1) {
+    // the money stops: the tag drops away and the locks hang loose
+    anim($('#tag'), [{ transform: 'none', opacity: 1 }, { transform: 'translateY(160px) rotate(40deg)', opacity: 0 }], { duration: 900, easing: 'cubic-bezier(.5,0,.9,.4)' });
+    document.querySelectorAll('.sh').forEach((p, i) => anim(p, [{ transform: 'none' }, { transform: OPEN }], { duration: 500, delay: 300 + i * 120 }));
+  }
+  if (s === 2) {
+    // sunset: the vendor's red padlock falls off; a coin goes in; the group's locks click shut
+    await anim($('#vendor'), [{ transform: 'none', opacity: 1 }, { transform: 'rotate(18deg)', offset: .25 }, { transform: 'translateY(120px) rotate(60deg)', opacity: 0 }], { duration: 1000, easing: 'cubic-bezier(.5,0,.8,.5)' });
+    await anim($('#coin'), [{ opacity: 0, transform: 'none' }, { opacity: 1, offset: .2 }, { opacity: 1, transform: 'translateY(84px)', offset: .9 }, { opacity: 0, transform: 'translateY(92px)' }], { duration: 650, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'none' });
+    for (const p of document.querySelectorAll('.sh')) await anim(p, [{ transform: OPEN }, { transform: 'none' }], { duration: 200 });
+    anim($('#seal'), [{ opacity: 0, transform: 'scale(1.7) rotate(-30deg)' }, { opacity: 1, transform: 'scale(.92) rotate(-8deg)', offset: .7 }, { opacity: 1, transform: 'scale(1) rotate(-10deg)' }], { duration: 380 });
+  }
+  if (s === 3) {
+    // her lock (the first) opens on her phone; the others stay shut
+    anim($('#lk0 .sh'), [{ transform: 'none' }, { transform: OPEN }], { duration: 420 });
+  }
+};
+still(0);
+const io = new IntersectionObserver((es) => {
+  const vis = es.filter((e) => e.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+  if (vis) enter(Number(vis.target.dataset.s));
+}, { threshold: [.5, .75] });
+document.querySelectorAll('.step').forEach((el) => io.observe(el));
+</script>
+</body>
+</html>
