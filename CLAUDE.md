@@ -44,7 +44,7 @@ npm run test:e2e     # needs Chromium; E2E_CDP can attach to an existing browser
 
 Pinned versions (Preprod support matrix, 9 Oct 2026): Compact 0.31.1, compact-runtime 0.16.0, Midnight.js 4.1.1, DApp Connector API 4.0.1, Wallet SDK 1.2.0, proof server 8.1.0. Midnight retired its own Preprod indexer and RPC on 9 Oct 2026, so every Preprod call now goes through **Blockfrost** (`BLOCKFROST_PROJECT_ID`, starts with `nightpreprod`).
 
-## Status (12 Oct 2026, evening, HEAD on main)
+## Status (13 Oct 2026, HEAD on main)
 
 **Ran on Midnight Preprod (12 Oct 2026, cloud session, wallet SDK from Node, no Lace)**
 - register-dust self `008d6278…ab357c7`; deploy `e95e3769…f3bef5`, contract `726bb6e0ce9d67ecc5c587a2f5f509ae39c26dbfd29d71c75f8d7de090ed7c61` (block 2,949,765, 300 s grace); endow transfer `00d7c29c…243b91` and NGO registration `008b8744…281bc6` to the fee key's DUST address.
@@ -75,7 +75,7 @@ Pinned versions (Preprod support matrix, 9 Oct 2026): Compact 0.31.1, compact-ru
 
 **Next steps, in order**
 1. Lace `payFees:false` on the owner's laptop (PREPROD.md step 9). Optional now: the no-wallet path already ran from a browser on Preprod, so members are covered either way.
-2. Deck (Google Slides "Undying Ledger - AKINDO Midnight Buildathon", owner's Drive): slides 9, 12, 13 and 14 updated in place on 12 Oct to the Preprod run (1 SPECK fee, 5 calls by a 0-DUST caller, verified vs not-yet-verified split; heartbeat moved to verified). Re-check after the Lace test.
+2. Deck (Google Slides "Undying Ledger - AKINDO Midnight Buildathon", owner's Drive): slides 9, 12, 13 and 14 updated in place on 12 Oct to the Preprod run (1 SPECK fee, 5 calls by a 0-DUST caller, verified vs not-yet-verified split; heartbeat moved to verified); slides 1, 12, 13, 14 updated again on 13 Oct for v2 (9 circuits, 66 tests, 14 member calls at 0 DUST, no-wallet from a browser verified). Re-check after the Lace test.
 3. The owner submits on AKINDO personally. **Do not submit, post publicly, or spend money without the owner's explicit yes.** Aim for 17 Oct.
 
 ## Design rules (the owner's standing rules; do not drift)
