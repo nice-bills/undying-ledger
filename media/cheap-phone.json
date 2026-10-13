@@ -1,6 +1,6 @@
 {
   "url": "https://nice-bills.github.io/undying-ledger/",
-  "at": "2026-10-13T02:28:40.911Z",
+  "at": "2026-10-13T14:10:50.521Z",
   "note": "Tap-to-result includes the demo’s minimum on-screen proving time (2.6 s for a meeting, 3.4 s for a proof slip), so values at that floor mean the circuit ran faster than the animation.",
   "results": [
     {
@@ -9,31 +9,38 @@
       "network": "none",
       "steps": {
         "recordMeeting (meeting 12)": {
-          "tapToResultSeconds": 7.646,
-          "longestFreezeMs": 221
+          "tapToResultSeconds": 7.611,
+          "longestFreezeMs": 166
         },
         "refused open (husband)": {
-          "tapToResultSeconds": 2.243,
-          "longestFreezeMs": 90
+          "tapToResultSeconds": 2.272,
+          "longestFreezeMs": 0
         },
         "sunset": {
-          "tapToResultSeconds": 4.094,
-          "longestFreezeMs": 96
+          "tapToResultSeconds": 3.419,
+          "longestFreezeMs": 125
         },
         "recordMeeting (meeting 13)": {
-          "tapToResultSeconds": 8.917,
-          "longestFreezeMs": 153
+          "tapToResultSeconds": 9.036,
+          "longestFreezeMs": 205
         },
         "attestSavings (proof slip)": {
-          "tapToResultSeconds": 6.255,
-          "longestFreezeMs": 109
+          "tapToResultSeconds": 6.315,
+          "longestFreezeMs": 71
         }
       },
-      "firstScreenSeconds": 2.261,
-      "loadedSeconds": 2.262,
-      "loadLongestFreezeMs": 299,
-      "firstPaintSeconds": 0.468,
-      "transferredKB": 769,
+      "landing": {
+        "readySeconds": 2.355,
+        "firstPaintSeconds": 1.22,
+        "wasmLoaded": false,
+        "transferredKB": 220,
+        "longestFreezeMs": 63
+      },
+      "firstScreenSeconds": 2.581,
+      "loadedSeconds": 2.582,
+      "loadLongestFreezeMs": 516,
+      "firstPaintSeconds": 1.22,
+      "transferredKB": 557,
       "pageErrors": []
     },
     {
@@ -42,31 +49,38 @@
       "network": "1638 kbps down, 150 ms RTT",
       "steps": {
         "recordMeeting (meeting 12)": {
-          "tapToResultSeconds": 10.763,
-          "longestFreezeMs": 957
+          "tapToResultSeconds": 8.354,
+          "longestFreezeMs": 1731
         },
         "refused open (husband)": {
-          "tapToResultSeconds": 4.539,
-          "longestFreezeMs": 723
+          "tapToResultSeconds": 2.74,
+          "longestFreezeMs": 285
         },
         "sunset": {
-          "tapToResultSeconds": 6.564,
-          "longestFreezeMs": 689
+          "tapToResultSeconds": 4.345,
+          "longestFreezeMs": 669
         },
         "recordMeeting (meeting 13)": {
-          "tapToResultSeconds": 12.655,
-          "longestFreezeMs": 1108
+          "tapToResultSeconds": 9.471,
+          "longestFreezeMs": 1391
         },
         "attestSavings (proof slip)": {
-          "tapToResultSeconds": 8.7,
-          "longestFreezeMs": 682
+          "tapToResultSeconds": 6.083,
+          "longestFreezeMs": 720
         }
       },
-      "firstScreenSeconds": 12.498,
-      "loadedSeconds": 12.498,
-      "loadLongestFreezeMs": 2164,
-      "firstPaintSeconds": 0.876,
-      "transferredKB": 769,
+      "landing": {
+        "readySeconds": 2.768,
+        "firstPaintSeconds": 1.124,
+        "wasmLoaded": false,
+        "transferredKB": 85,
+        "longestFreezeMs": 347
+      },
+      "firstScreenSeconds": 15.95,
+      "loadedSeconds": 15.951,
+      "loadLongestFreezeMs": 4035,
+      "firstPaintSeconds": 1.124,
+      "transferredKB": 692,
       "pageErrors": []
     },
     {
@@ -75,31 +89,38 @@
       "network": "400 kbps down, 400 ms RTT",
       "steps": {
         "recordMeeting (meeting 12)": {
-          "tapToResultSeconds": 11.549,
-          "longestFreezeMs": 964
+          "tapToResultSeconds": 7.831,
+          "longestFreezeMs": 1265
         },
         "refused open (husband)": {
-          "tapToResultSeconds": 3.847,
-          "longestFreezeMs": 578
+          "tapToResultSeconds": 2.822,
+          "longestFreezeMs": 195
         },
         "sunset": {
-          "tapToResultSeconds": 5.76,
-          "longestFreezeMs": 622
+          "tapToResultSeconds": 4.673,
+          "longestFreezeMs": 751
         },
         "recordMeeting (meeting 13)": {
-          "tapToResultSeconds": 10.873,
-          "longestFreezeMs": 1027
+          "tapToResultSeconds": 9.199,
+          "longestFreezeMs": 1547
         },
         "attestSavings (proof slip)": {
-          "tapToResultSeconds": 6.804,
-          "longestFreezeMs": 614
+          "tapToResultSeconds": 6.327,
+          "longestFreezeMs": 820
         }
       },
-      "firstScreenSeconds": 22.427,
-      "loadedSeconds": 22.427,
-      "loadLongestFreezeMs": 2597,
-      "firstPaintSeconds": 1.456,
-      "transferredKB": 769,
+      "landing": {
+        "readySeconds": 4.356,
+        "firstPaintSeconds": 1.876,
+        "wasmLoaded": false,
+        "transferredKB": 85,
+        "longestFreezeMs": 439
+      },
+      "firstScreenSeconds": 23.025,
+      "loadedSeconds": 23.025,
+      "loadLongestFreezeMs": 3954,
+      "firstPaintSeconds": 1.876,
+      "transferredKB": 692,
       "pageErrors": []
     }
   ]

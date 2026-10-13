@@ -207,6 +207,7 @@ npm run compact               # -> contract/src/managed/undying (contract/, zkir
 | `chain/src/relay/__tests__/guard.test.ts` | 5 | the relay's spend guard: a 30-member meeting fits, junk is capped per circuit with a retry time, hourly and daily totals, the meeting reserve, limits from the environment |
 | `e2e/tests/live.e2e.ts` | 1 per phone size | `#/live` loads from the static build, shows the recorded Preprod run with no wallet or token, says there is no Lace wallet; no write controls without one |
 | Preprod, by hand (12 Oct 2026) | 6 transactions | `scripts/preprod.sh` and `chain/src/scripts/*`: register-dust, deploy, endow, relay, `measure --apply`; hashes in [Ran on Midnight Preprod](#ran-on-midnight-preprod-12-october-2026) |
+| `scripts/cheap-phone.mjs` (against Pages) | 3 profiles | a cheap Android emulated in Chromium (360x780, CPU 6x slower, slow 4G or 3G): the landing is usable in 2.8 s on slow 4G and 4.4 s on 3G and loads no circuits; recording a meeting takes 8.4 s from tap to result, of which 2.6 s is the on-screen minimum. Results in `media/cheap-phone.json`. Emulated, not a real phone. |
 | `e2e/tests/demo-flow.e2e.ts` | 4 per phone size | the six-beat story in a real browser, the refusals, Terms/Privacy/fee key, no console errors; plus an agentic smoke test that runs only with a model key |
 
 ### Deploying the demo
