@@ -17,6 +17,7 @@ import {
   buildBurnerProviders,
   buildProviders,
   checkLaceSetup,
+  checkPassphrase,
   connectToWallet,
   isLocalProver,
   LOCAL_PROVER,
@@ -80,6 +81,8 @@ export class LiveSession {
   private fee: { relayUrl: string; letLacePay: boolean } = { relayUrl: '', letLacePay: false };
   private stageListener: ((s: Stage) => void) | undefined;
   private providers: UndyingProviders | undefined;
+  /** What the providers were built with: a new passbook lock (or burner account) rebuilds them. */
+  private providersFor: string | undefined;
   private api: UndyingAPI | undefined;
   private me: { role: Role; slot: number; groupSecret: Uint8Array } | undefined;
 
@@ -160,9 +163,14 @@ export class LiveSession {
     const slot = o.role === 'member' ? Number(o.slot) : 0;
     if (o.role === 'member' && (!Number.isInteger(slot) || slot < 0 || slot > MAX_SLOT)) throw new LiveError('bad-input', `Your slot is a whole number from 0 to ${MAX_SLOT}.`);
     if (!o.passphrase) throw new LiveError('bad-input', 'Choose a passphrase to lock your passbook on this phone.');
+    checkPassphrase(o.passphrase);
 
     const onStage = (s: Stage) => this.stageListener?.(s);
-    let providers = this.providers;
+    // No wallet address to scope the stored passbook to: use this device's public role key,
+    // so the same secret finds the same passbook after a reload.
+    const account = this.source.kind === 'lace' ? 'lace' : toHex(roleKey(o.role === 'secretary' ? DOMAINS.secretary : DOMAINS.member, mySecret));
+    const builtFor = `${account}:${o.passphrase}`;
+    let providers = this.providersFor === builtFor ? this.providers : undefined;
     if (!providers && this.source.kind === 'lace') {
       const shielded = await this.source.connected.getShieldedAddresses();
       providers = await buildProviders({
@@ -175,9 +183,6 @@ export class LiveSession {
         onStage,
       });
     } else if (!providers) {
-      // No wallet address to scope the stored passbook to: use this device's public role key,
-      // so the same secret finds the same passbook after a reload.
-      const account = toHex(roleKey(o.role === 'secretary' ? DOMAINS.secretary : DOMAINS.member, mySecret));
       providers = buildBurnerProviders({
         zkConfigBaseUrl: o.zkConfigBaseUrl,
         proverUri: this.setup.proverUri,
@@ -188,6 +193,7 @@ export class LiveSession {
       });
     }
     this.providers = providers;
+    this.providersFor = builtFor;
 
     const api = await UndyingAPI.join(providers, o.zkConfigBaseUrl, address as never, createPrivateState(mySecret, groupSecret));
     const L = await api.currentLedger();

@@ -381,6 +381,28 @@ describe('join a deployed group by address', () => {
     expect(h.indexerUrls).toHaveLength(0);
   });
 
+  it('a weak passbook lock is refused in the page’s words before any network call', async () => {
+    makeLace();
+    const s = await LiveSession.connect('preprod', 50);
+    const p = join(s, 'secretary', 0, { passphrase: 'undyingledgerlock' });
+    expect(await code(p)).toBe('bad-input');
+    await expect(join(s, 'secretary', 0, { passphrase: 'undyingledgerlock' })).rejects.toThrow('stronger passbook lock');
+    expect(h.levelCfg).toHaveLength(0);
+    expect(h.indexerUrls).toHaveLength(0);
+  });
+
+  it('a new passbook lock after a failed join rebuilds the providers with it (found on Preprod with Lace)', async () => {
+    makeLace();
+    const s = await LiveSession.connect('preprod', 50);
+    await expect(join(s, 'secretary', 0, { groupSecretHex: hex(bytes(99)) })).rejects.toThrow('group secret does not belong');
+    await join(s, 'secretary', 0, { passphrase: 'Tin-Box-Lock-2026!' });
+    const last = h.levelCfg.at(-1) as { privateStoragePasswordProvider: () => string };
+    expect(h.levelCfg).toHaveLength(2);
+    expect(last.privateStoragePasswordProvider()).toBe('Tin-Box-Lock-2026!');
+    await join(s, 'member', 0, { passphrase: 'Tin-Box-Lock-2026!' });
+    expect(h.levelCfg).toHaveLength(2);
+  });
+
   it('secrets that are not this group’s are caught against the public keys', async () => {
     makeLace();
     const s = await LiveSession.connect('preprod', 50);

@@ -25,6 +25,7 @@ import { FetchZkConfigProvider } from '@midnight-ntwrk/midnight-js-fetch-zk-conf
 import { httpClientProofProvider } from '@midnight-ntwrk/midnight-js-http-client-proof-provider';
 import { indexerPublicDataProvider } from '@midnight-ntwrk/midnight-js-indexer-public-data-provider';
 import { levelPrivateStateProvider } from '@midnight-ntwrk/midnight-js-level-private-state-provider';
+import { validatePassword } from '@midnight-ntwrk/midnight-js-utils';
 import { bytesToHex as toHex, hexToBytes as fromHex } from './hex.js';
 import {
   type Binding,
@@ -159,6 +160,19 @@ export async function submitViaGroupFeeKey(relayUrl: string, tx: FinalizedTransa
     throw new LiveError('relay-refused', `The fee-key relay refused this call: ${body.error ?? `HTTP ${res.status}`}`);
   }
   return body.txId as TransactionId;
+}
+
+/**
+ * The passbook lock must pass Midnight.js's own password rules (16+ characters, three kinds of
+ * character, no runs like 1234). Checked before any provider is built, so a weak lock is refused
+ * in the page's words and never baked into the providers.
+ */
+export function checkPassphrase(passphrase: string): void {
+  try {
+    validatePassword(passphrase);
+  } catch (e) {
+    throw new LiveError('bad-input', `Choose a stronger passbook lock: ${reasonOf(e)}.`, { cause: e });
+  }
 }
 
 /** Private state in this browser (IndexedDB), encrypted with the member's passphrase. */
