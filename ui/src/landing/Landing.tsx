@@ -149,7 +149,7 @@ export default function Landing() {
               Open the demo <span className="lp-slot" aria-hidden="true" />
             </a>
             <a className="lp-second" href={VIDEO} target="_blank" rel="noreferrer">
-              Watch 54 s
+              Watch 57 s
             </a>
           </div>
           <div className="lp-stage" role="img" aria-label="A cash box takes meeting 12’s coins, locks, and prints its receipt">

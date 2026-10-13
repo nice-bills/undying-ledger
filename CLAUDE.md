@@ -28,7 +28,7 @@ Undying Ledger is a private record book for a village savings and loan associati
 | `ui/src/demo/measured.ts` | Measured fee and proof time. Null until Preprod runs; `ui/scripts/set-measured.mjs` writes it. While it is null the UI says "placeholder". |
 | `e2e/` | tester.army e2e suite (six-beat story, refusals, legal links, console errors, `#/live` smoke) |
 | `docs/` | Production build. Pages serves the `gh-pages` branch, which `.github/workflows/pages.yml` keeps equal to `docs/`. |
-| `media/` | launch-wide.mp4 and launch-tall.mp4 (54 s, `media/launch/make.sh`), demo.mp4 (82 s, cash-box UI), demo-narrated.mp4 (82 s; the synthetic en-NG voice from the earlier cut, edge-tts `en-NG-EzinneNeural`, re-timed to the new beats), demo.srt, screens/, live/, strip.jpg, record-demo.mjs |
+| `media/` | launch-wide.mp4 and launch-tall.mp4 (57 s, `media/launch/make.sh`, opens on the landing), demo.mp4 (82 s, cash-box UI), demo-narrated.mp4 (82 s; the synthetic en-NG voice from the earlier cut, edge-tts `en-NG-EzinneNeural`, re-timed to the new beats), demo.srt, screens/, live/, strip.jpg, record-demo.mjs |
 | `scripts/preprod.sh` | One-command Preprod run: `check \| up \| deploy \| measure [--apply] \| down` |
 
 ## Commands
@@ -65,7 +65,7 @@ Pinned versions (Preprod support matrix, 9 Oct 2026): Compact 0.31.1, compact-ru
 
 **Done and verified in the cloud session**
 - 66 unit tests, typecheck, e2e passed / 2 agentic skipped at 390 and 430 (e2e needs Node >= 22.22.3; the container has 22.22.0, so a Node 24 tarball was used).
-- UI rebuilt as the cash box (owner's choice); launch video `media/launch-wide.mp4` and `-tall.mp4` (54 s, `media/launch/make.sh`, ends on the Preprod record in `#/live`); demo.mp4 and the narrated cut (82 s; narration re-timed to the new beats). All re-rendered after the measurement, so receipts show 1 SPECK.
+- UI rebuilt as the cash box (owner's choice); launch video `media/launch-wide.mp4` and `-tall.mp4` (57 s, opens on the landing, `media/launch/make.sh`, ends on the Preprod record in `#/live`); demo.mp4 and the narrated cut (82 s; narration re-timed to the new beats). All re-rendered after the measurement, so receipts show 1 SPECK.
 - Proving keys ship in `docs/zk/` so `#/live` can prove from Pages.
 
 **Container notes (cloud)**
