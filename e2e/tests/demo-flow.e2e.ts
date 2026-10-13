@@ -105,7 +105,7 @@ test('refusals on a fresh book: early sunset and an over-large proof', { tags: [
 
 test('Terms, Privacy and the fee key page are reachable and plain', { tags: ['legal'] }, async ({ app, screen, browser }) => {
   await browser.addInitScript(ERROR_TRAP);
-  await app.open('/');
+  await app.open('/#/demo');
   await screen.getByRole('link', 'Privacy').tap();
   await expect(screen.getByRole('heading', 'Privacy')).toBeVisible();
   await expect(screen.getByText('We collect nothing')).toBeVisible();

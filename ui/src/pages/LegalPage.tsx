@@ -8,10 +8,10 @@ export function LegalPage({ which }: { which: 'terms' | 'privacy' }) {
   useEffect(() => h.current?.focus({ preventScroll: true }), [which]);
   return (
     <section className={`beat ${which === 'terms' ? 'w-green' : 'w-ox'}`} style={{ bottom: 0 }} aria-label={which === 'terms' ? 'Terms of use' : 'Privacy policy'} data-testid={which}>
-      <Leaf band={[<b key="a">Undying Ledger</b>, <a href="#/" key="b">Back to the book</a>]} dog>
+      <Leaf band={[<b key="a">Undying Ledger</b>, <a href="#/demo" key="b">Back to the book</a>]} dog>
         {which === 'terms' ? <Terms h={h} /> : <Privacy h={h} />}
         <div style={{ height: 22 }} />
-        <a className="btn" href="#/" style={{ textDecoration: 'none' }}>
+        <a className="btn" href="#/demo" style={{ textDecoration: 'none' }}>
           Back to the book
         </a>
       </Leaf>

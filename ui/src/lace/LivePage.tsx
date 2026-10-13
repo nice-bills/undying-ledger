@@ -179,7 +179,7 @@ export default function LivePage() {
 
   return (
     <section className="beat w-slate" style={{ bottom: 0 }} aria-label="Live register on Preprod" data-testid="live">
-      <Leaf band={[<b key="a">Live on Preprod</b>, <a href="#/" key="b">Back to the demo</a>]}>
+      <Leaf band={[<b key="a">Live on Preprod</b>, <a href="#/demo" key="b">Back to the demo</a>]}>
         <h2 className="disp" tabIndex={-1} ref={h} style={{ fontSize: 40 }}>
           The public register
         </h2>

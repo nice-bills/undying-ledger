@@ -18,7 +18,7 @@ export function FeeKeyPage({ e }: { e: DemoEngine }) {
   useEffect(() => h.current?.focus({ preventScroll: true }), []);
   return (
     <section className="beat w-green" aria-label="Group fee key" style={{ bottom: 0 }} data-testid="fee-key">
-      <Leaf band={[<><b>Group fee key</b> {f.epoch}</>, <a href="#/" key="b">Back to the book</a>]}>
+      <Leaf band={[<><b>Group fee key</b> {f.epoch}</>, <a href="#/demo" key="b">Back to the book</a>]}>
         <h2 className="disp" tabIndex={-1} ref={h}>
           Fee key {f.epoch}
         </h2>
@@ -92,7 +92,7 @@ export function FeeKeyPage({ e }: { e: DemoEngine }) {
           ))}
         </ul>
         <div style={{ height: 18 }} />
-        <a className="btn" href="#/" style={{ textDecoration: 'none' }}>
+        <a className="btn" href="#/demo" style={{ textDecoration: 'none' }}>
           Back to the book
         </a>
       </Leaf>

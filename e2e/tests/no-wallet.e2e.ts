@@ -43,7 +43,7 @@ test('#/live without a wallet: the relay is the only way to pay, and a Blockfros
 
 test('the demo opens on a skeleton of meeting 12, then the real book', { tags: ['demo'] }, async ({ app, screen, browser }) => {
   await browser.addInitScript(ERROR_TRAP);
-  await app.open('/');
+  await app.open('/#/demo');
   const b0 = screen.getByTestId('beat-0');
   await expect(b0.getByRole('button', 'Stamp and record meeting 12')).toBeVisible();
   await expect(screen.getByTestId('opening')).not.toBeVisible();

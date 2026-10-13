@@ -24,6 +24,7 @@ Undying Ledger is a private record book for a village savings and loan associati
 | `chain/src/` | Midnight.js 4.1.1 wiring: config.ts (Blockfrost Preprod), api.ts, browser.ts (Lace connect, check and build; `payFees:false` plus the relay), wallet.ts, scripts/deploy.ts, scripts/measure.ts, relay/fee-key-relay.ts |
 | `chain/compose.yml` | proof server (`midnightntwrk/proof-server:8.1.0`) |
 | `ui/` | Vite + React app. A six-beat demo story (`ui/src/beats`, `ui/src/box` cash-box art and motion; `ui/src/a2` keeps the shared motion helpers) runs the real compiled circuits in the browser with no wallet. `#/live` is the Lace write path (`ui/src/lace/live-session.ts`, `LiveWrite.tsx`). `#/live?fake=1` is a dev-only fake session that is stripped from the production build. |
+| `ui/src/landing/` | The front door at the root URL (`#/`): cash-box hero (coins in, locks shut, the real 1 SPECK receipt), the problem, what it does, the Preprod record. Loads no circuits; `main.tsx` lazy-loads the app for `#/demo`, `#/live` and the legal pages. Chosen from three mocks in `media/landing-mocks/` (A). |
 | `ui/src/demo/measured.ts` | Measured fee and proof time. Null until Preprod runs; `ui/scripts/set-measured.mjs` writes it. While it is null the UI says "placeholder". |
 | `e2e/` | tester.army e2e suite (six-beat story, refusals, legal links, console errors, `#/live` smoke) |
 | `docs/` | Production build. Pages serves the `gh-pages` branch, which `.github/workflows/pages.yml` keeps equal to `docs/`. |
