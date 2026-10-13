@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // How the six-beat demo runs on a cheap Android phone, emulated in Chromium: a 360x780 screen,
 // the CPU slowed 6x (Chrome DevTools' "low-end mobile" preset is 6x) and a slow mobile network.
-// Reports load time, how long each real circuit run takes from tap to result, and the longest
+// Reports the landing's load time (it loads no circuits), then the demo's load time, how long
+// each real circuit run takes from tap to result, and the longest
 // main-thread freeze (long tasks), for an unthrottled run and the cheap-phone profile.
 //
 //   npm run build && npx vite preview --outDir docs --port 4179 -c ui/vite.config.ts &
@@ -31,6 +32,8 @@ async function run(name, prof) {
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: prof.cpu });
   let bytes = 0;
   cdp.on('Network.loadingFinished', (e) => (bytes += e.encodedDataLength));
+  const wasm = [];
+  cdp.on('Network.requestWillBeSent', (e) => e.request.url.endsWith('.wasm') && wasm.push(e.request.url));
   await p.addInitScript(() => {
     window.__long = [];
     new PerformanceObserver((l) => l.getEntries().forEach((e) => window.__long.push(e.duration))).observe({ type: 'longtask', buffered: true });
@@ -43,10 +46,26 @@ async function run(name, prof) {
   const resetLong = () => p.evaluate(() => (window.__long = []));
   const out = { profile: name, cpuSlowdown: prof.cpu, network: prof.net ? `${Math.round((prof.net.downloadThroughput * 8) / 1024)} kbps down, ${prof.net.latency} ms RTT` : 'none', steps: {} };
 
-  const t0 = Date.now();
+  // the front door first: how soon a judge on this phone sees the page and its one button
+  let t0 = Date.now();
   await p.goto(url, { waitUntil: 'commit' });
+  await p.getByRole('link', { name: 'Open the demo' }).waitFor({ state: 'visible', ...T });
+  out.landing = {
+    readySeconds: (Date.now() - t0) / 1000,
+    firstPaintSeconds: Math.round(await p.evaluate(() => performance.getEntriesByName('first-contentful-paint')[0]?.startTime ?? NaN)) / 1000,
+    wasmLoaded: false,
+  };
+  await p.waitForLoadState('networkidle', T).catch(() => undefined);
+  out.landing.transferredKB = Math.round(bytes / 1024);
+  out.landing.wasmLoaded = wasm.length > 0;
+  out.landing.longestFreezeMs = Math.round(await longest());
+  bytes = 0;
+  // a visitor reads the landing for a few seconds (the page fetches the demo meanwhile), then taps
+  await p.waitForTimeout(Number(process.env.READ_MS ?? 8000));
+  t0 = Date.now();
+  await p.getByRole('link', { name: 'Open the demo' }).click();
   await beat(0).getByRole('button', { name: 'Stamp and record meeting 12' }).waitFor({ state: 'visible', ...T });
-  out.firstScreenSeconds = (Date.now() - t0) / 1000;
+  out.firstScreenSeconds = (Date.now() - t0) / 1000; // tap on Open the demo to meeting 12 ready
   await p.waitForLoadState('networkidle', T).catch(() => undefined);
   out.loadedSeconds = (Date.now() - t0) / 1000;
   out.loadLongestFreezeMs = Math.round(await longest());
