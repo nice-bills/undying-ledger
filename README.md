@@ -109,17 +109,20 @@ The contract was compiled with **Compact toolchain 0.31.1** (`pragma language_ve
 
 | Circuit | Who | What it does | k (rows) |
 |---|---|---|---|
-| `constructor` | NGO / vendor | Creates the group: up to 10 member keys, secretary, maintainer, group-secret tag, first fee-key tag, grace period. Pre-commits all 10 passbooks to zero. | n/a |
-| `recordMeeting(page, entries[5])` | secretary | For each of 5 slots: opens the old passbook commitment, applies the entry (shares, social fund, loan issued, loan repaid; no over-repayment allowed) and writes a fresh commitment. **Every slot is re-committed every meeting**, so the chain can’t tell who saved or borrowed. | 14 (11,288) |
+| `constructor` | NGO / vendor | Creates the group: up to 30 member keys, secretary, maintainer, group-secret tag, first fee-key tag, grace period. Commits empty passbooks for the pages its members fill (five slots a page). | n/a |
+| `recordMeeting(page 0–5, entries[5])` | secretary | For each of 5 slots: opens the old passbook commitment, applies the entry (shares, social fund, loan issued, loan repaid; no over-repayment allowed) and writes a fresh commitment. **Every slot is re-committed every meeting**, so the chain can’t tell who saved or borrowed. | 14 (11,288) |
 | `attestSavings(slot, min, nonce)` | member | Proves "I hold ≥ `min` shares" for a loan officer’s nonce without revealing the amount. | 14 (12,771) |
-| `addMember(key)` | secretary | Adds a member (max 10). Works after sunset. | 13 |
+| `addMember(key)` | secretary | Adds a member (max 30). When a page of five is full, commits the next page's empty passbooks. Works after sunset. | 14 |
 | `handoverSecretary(key)` | secretary | Hands the role to a new secretary. Works after sunset. | 13 |
+| `voteSecretary(slot, key)` | member | One vote per member slot per election; a vote can move. When more than half of **all** members back the same key, it becomes the secretary. **Works after sunset**, when no maintainer is left to replace a lost secretary. | 13 |
 | `adminReplaceSecretary(key)` | maintainer | Replaces a lost secretary. **Disabled after sunset.** | 13 |
 | `heartbeat(now)` | maintainer | Proves the maintainer is alive. `now` can’t be in the future (checked with `blockTimeGte`). **Disabled after sunset.** | 13 |
 | `sunset()` | **anyone** | Allowed once `lastHeartbeat + grace` has passed. Sets the phase to SUNSET and erases the maintainer key. | 7 |
 | `rotateFeeKey(tag)` | secretary | Records the tag of a fresh group DUST key, so member apps switch keys. Works after sunset. | 13 |
 
-The `k` values come from `zkir mock-compile` on the compiled output. All circuits are at k ≤ 14. The first version used `persistentCommit` (SHA-256), which made `recordMeeting` k=17 with 94k rows. Moving the passbook commitments to Poseidon-based `transientCommit` cut it to about one eighth of that. The trade-off is that Compact does not promise transient hashes stay stable across language versions, so a future contract upgrade would have to re-commit the passbooks. Identity keys still use `persistentHash`.
+The `k` values come from `zkir mock-compile` on the compiled output; `voteSecretary` and the larger `addMember` were added later in a container without `zkir`, so theirs are read from their proving keys, which are the same size as the other k=13 and k=14 keys. All circuits are at k ≤ 14. The first version used `persistentCommit` (SHA-256), which made `recordMeeting` k=17 with 94k rows. Moving the passbook commitments to Poseidon-based `transientCommit` cut it to about one eighth of that. The trade-off is that Compact does not promise transient hashes stay stable across language versions, so a future contract upgrade would have to re-commit the passbooks. Identity keys still use `persistentHash`.
+
+**When the secretary's phone is lost after sunset.** Before sunset the maintainer can replace her; after it nobody can, so members elect a new secretary with `voteSecretary`, as a VSLA elects its officers. The new secretary's phone starts empty, so each member reads out her stamp and the new secretary's app checks every stamp against the sealed commitments before keeping it (`rebuildFromStamps` in the simulator, "Collect a member's stamp" on `#/live`). Nobody has to trust the old phone or a server.
 
 **How a member gets her balance without a server.** At the meeting, the secretary’s phone hands each member’s phone a *stamp*: the plaintext passbook plus its version. The member’s app checks the stamp against the on-chain commitment using the group secret. A secretary who lies is caught immediately, and a secretary whose phone holds a tampered book cannot record at all, because the circuit re-opens every old commitment. This works like stamping a paper passbook, with no operator database.
 
@@ -130,11 +133,12 @@ The `k` values come from `zkir mock-compile` on the compiled output. All circuit
 | Amounts (shares, social fund, loans), names, all secrets | **Never on-chain.** Amounts are private circuit inputs and leave the device only inside a hiding commitment. |
 | Each member’s own passbook | That member’s phone (PIN-locked app). The app sends no SMS. |
 | Every passbook | The secretary’s phone. Shares are counted aloud at a real VSLA meeting too, so the group already knows them. |
-| Group size, slot numbers, number of meetings, commitments, heartbeat time, sunset phase, fee-key epoch/tag, "≥ N shares" attestations (by slot) | Public. |
+| Group size, slot numbers, number of meetings, commitments, heartbeat time, sunset phase, fee-key epoch/tag, "≥ N shares" attestations (by slot), secretary election votes (slot and candidate key) | Public. |
 
 Two known leaks are accepted:
 - An attestation reveals which slot (a pseudonym) made it.
 - The group size is public.
+- A secretary election shows which slot voted for which candidate key. Slots are pseudonyms, but members who know each other's slots can see each other's votes.
 
 The unit tests check the raw public state. They search the ledger and every public transcript for the exact amounts recorded and for every secret, and they show that two groups with very different balances produce public state of the same shape.
 
@@ -143,7 +147,8 @@ The unit tests check the raw public state. They search the ledger and every publ
 - There is **one DUST key per group**, not one global public key, and it is kept inside the members’ app. If the key were public to the whole world, anyone could drain the regenerating DUST at no cost to themselves (see the risks below).
 - **The NGO endows the key once** by registering NIGHT for DUST generation to the key’s DUST address. Relatives can add capacity by **designating** their NIGHT’s DUST to the same address.
 - **Anyone in the group can run the relay** (`chain/src/relay/fee-key-relay.ts`). It starts a DUST wallet from the group key with `DustWallet(...).startWithSecretKey(...)`, adds the DUST fee to a member’s bound transaction (`balanceFinalizedTransaction(tx, …, { tokenKindsToBalance: ['dust'] })`, the same flow as `sponsorAndSubmit` in example-private-party) and submits it. It refuses anything that is not a call to this group’s contract.
-- **Members sign with Lace** in `payFees: false` mode (`chain/src/browser.ts`, copied from example-bboard), or with a burner wallet. Either way they hold 0 DUST.
+- **Members need no wallet.** A call to this contract moves no coins, so it needs no balancing and no signature: the member's phone proves it, binds it with a throwaway key that holds nothing (`chain/src/burner.ts`), and hands it to the relay. This is "Use without a wallet" on `#/live`. Members can also use **Lace** in `payFees: false` mode (`chain/src/browser.ts`, copied from example-bboard). Either way they hold 0 DUST.
+- **The relay caps what it pays for** (`chain/src/relay/guard.ts`): calls per hour, per day and per circuit (sized so a 30-member meeting, six transactions, can be retried twice an hour), and a reserve that only `recordMeeting` may spend, so junk cannot crowd out a meeting. It answers 429 with `Retry-After` and reports the tank (`ok`, `low`, `reserve`) on `/health`. Limits are set with `RELAY_MAX_PER_HOUR`, `RELAY_MAX_PER_DAY`, `RELAY_RESERVE_SPECK` and `RELAY_LOW_SPECK`.
 
 ## Run it
 
@@ -151,7 +156,7 @@ Requires Node 22+.
 
 ```bash
 npm ci
-npm test                      # 20 contract tests + 2 demo-story tests + 28 live-wiring tests (vitest)
+npm test                      # 25 contract + 2 demo-story + 34 live-wiring + 5 relay-guard tests (vitest)
 npm run typecheck             # contract, ui, chain
 npm run dev                   # the demo at http://localhost:5173
                               # http://localhost:5173/#/live?fake=1 previews the joined live screens with a made-up
@@ -172,9 +177,10 @@ npm run compact               # -> contract/src/managed/undying (contract/, zkir
 
 | Suite | Count | What |
 |---|---|---|
-| `contract/src/test/undying.test.ts` | 20 | every circuit, every refusal, raw public state searched for amounts and secrets, two groups with different balances have identically shaped public state |
+| `contract/src/test/undying.test.ts` | 25 | every circuit, every refusal, a 30-member meeting over six pages, a new page when a sixth member joins, a secretary election after sunset and the new secretary rebuilding the book from stamps, raw public state searched for amounts and secrets, two groups with different balances have identically shaped public state |
 | `ui/src/demo/__tests__/engine.test.ts` | 2 | the demo story end to end on the engine; a leaked key drains fees (by overpaying) but not the book, rotation recovers |
-| `ui/src/lace/__tests__/live-session.test.ts` | 28 | the Lace write path with a mocked `window.midnight` (dApp connector 4.0.1) and mocked Midnight.js providers: connect, network and prover checks, join by address, record meeting through the fee-key relay (`payFees: false`) or with Lace paying, own passbook and stamps checked with the real `passbookCommitment`, proof, sunset, and every error message |
+| `ui/src/lace/__tests__/live-session.test.ts` | 34 | the write path with a mocked `window.midnight` (dApp connector 4.0.1) and mocked Midnight.js providers: connect, network and prover checks, join by address, record meeting through the fee-key relay (`payFees: false`) or with Lace paying, the no-wallet path (proved here, bound, sent to the relay, Lace never touched), secretary election, own passbook and stamps checked with the real `passbookCommitment`, proof, sunset, and every error message |
+| `chain/src/relay/__tests__/guard.test.ts` | 5 | the relay's spend guard: a 30-member meeting fits, junk is capped per circuit with a retry time, hourly and daily totals, the meeting reserve, limits from the environment |
 | `e2e/tests/live.e2e.ts` | 1 per phone size | `#/live` loads from the static build, shows the recorded Preprod run with no wallet or token, says there is no Lace wallet; no write controls without one |
 | Preprod, by hand (12 Oct 2026) | 6 transactions | `scripts/preprod.sh` and `chain/src/scripts/*`: register-dust, deploy, endow, relay, `measure --apply`; hashes in [Ran on Midnight Preprod](#ran-on-midnight-preprod-12-october-2026) |
 | `e2e/tests/demo-flow.e2e.ts` | 4 per phone size | the six-beat story in a real browser, the refusals, Terms/Privacy/fee key, no console errors; plus an agentic smoke test that runs only with a model key |
@@ -189,11 +195,12 @@ See **[PREPROD.md](PREPROD.md)** and `scripts/preprod.sh`: Docker proof server, 
 
 ## Roadmap (Wave 3)
 
-1. **Groups of 30.** Six pages of five slots, matching the 15 to 30 members of a real VSLA.
-2. **Secretary recovery after sunset.** Today only the maintainer can replace a lost secretary, and sunset removes the maintainer. Members will be able to replace her by vote.
-3. **A standby fee key and a share-out circuit** for the end of the savings cycle.
-4. **A burner key inside the member app**, so a member needs no wallet at all and the relay adds the fee.
-5. **One pilot group.** The measure of success is whether the group is still recording six months after the NGO leaves.
+Done in Wave 2 after the first Preprod run: groups of 30, secretary recovery by member vote, the no-wallet (burner key) path and the relay's spend guard.
+
+1. **One pilot group.** The measure of success is whether the group is still recording six months after the NGO leaves.
+2. **A standby fee key and a share-out circuit** for the end of the savings cycle.
+3. **A member app that runs offline between meetings** and syncs at the meeting, for places with one bar of signal.
+4. **Re-check the fee on Mainnet** and the endowment it implies.
 
 ## Known limits
 
@@ -209,7 +216,8 @@ See **[PREPROD.md](PREPROD.md)** and `scripts/preprod.sh`: Docker proof server, 
 - **The guarantee is social, not locked.** The NGO can revoke its DUST registration at any time, and the protocol reserves the right to change DUST rules.
 - **No contract upgrade path at sunset.** Handing maintenance authority to the group at sunset is future work.
 - **Time, not blocks.** The heartbeat window is in seconds of block time (90 s in the demo, 7 days by default on deploy).
-- **Up to 10 members per contract**, recorded as 2 pages of 5. Real VSLAs have 15 to 30 members.
+- **Up to 30 members per contract**, recorded as pages of five: a full meeting of 30 is six `recordMeeting` transactions and six proofs. If one page fails the others stay recorded, and the app keeps each confirmed page's passbooks; the secretary re-records the missing page.
+- **The relay's spend guard covers the relay, not the key.** Anyone who copies the group fee key can still spend its DUST directly, outside the relay (see Fee-drain risk). The guard stops junk sent through the relay from crowding out meetings.
 - **Transient commitments.** Passbooks use Poseidon `transientCommit` (k=14 instead of 17), which Compact does not promise to keep stable across language versions; a future upgrade would re-commit the passbooks.
 - **Design:** prices are written GH¢, as in Ghanaian shops and markets (the faces have no ₵ glyph); screen readers hear ₵.
 
