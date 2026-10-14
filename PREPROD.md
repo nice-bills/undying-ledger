@@ -233,6 +233,33 @@ GROUP_JSON=.preprod/group3.json RELAY_URL=http://localhost:3001 BURNER_OUT=.prep
 MIDNIGHT_NETWORK=preprod npm run burner:preprod -w chain
 ```
 
+### 9c. Invite links, QR cards and a 6-digit PIN
+
+Instead of typing the address, two 64-hex secrets, a slot and a 16-character lock, each member
+scans her card and picks a 6-digit PIN.
+
+```bash
+GROUP=.preprod/group.json RELAY_URL=http://<laptop LAN IP>:3001 npm run invites -w chain
+# writes .preprod/invites.html (mode 600): one QR card for the secretary and one per member slot
+```
+
+- The link is `<app>#/live?invite=u1.<contract>.<group secret>.<slot or s>.<own secret>.<relay>`.
+  It sits in the URL fragment, which the browser never sends to a server, and the page removes it
+  from the address bar once read. `APP_URL` sets the app (default: the Pages site);
+  `INVITE_BLOCKFROST=1` also puts `BLOCKFROST_PROJECT_ID` into each link, so no-wallet members need
+  not paste it (anyone with a link can then use that quota).
+- The card is that person's key: whoever scans it can act as her. Hand each card to its owner and
+  destroy the paper.
+- The PIN becomes the passbook lock through PBKDF2-SHA256 (600,000 rounds), salted with the contract
+  and her own secret, so the same PIN opens the same passbook on that phone next time. Without the
+  invite, the PIN opens nothing; with the invite and the phone, 10^6 PINs can be tried offline, so
+  the PIN keeps out a look over the shoulder, not someone who has both. **Use a long lock instead**
+  keeps the old 16-character lock.
+- **Join as someone else** (after joining) lets the next person join on the same phone. Each
+  person's passbook stays in the browser under her own PIN.
+- While a call runs, the page shows **Sent** with the tx id as soon as the relay (or Lace) returns.
+  The relay answers once Preprod has finalized the call; the rest of the wait is the indexer.
+
 ### 10. Optional: the group fee-key relay
 
 ```bash
