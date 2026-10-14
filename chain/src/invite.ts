@@ -24,6 +24,11 @@ export type Invite = {
   mySecret: string;
   relay?: string;
   blockfrost?: string;
+  /**
+   * The group's proof server, for members whose phone cannot run one (https, or localhost).
+   * Her private inputs go to it, so it should be a machine the group trusts: the secretary's laptop.
+   */
+  prover?: string;
 };
 
 const HEX32 = /^[0-9a-f]{64}$/;
@@ -32,7 +37,7 @@ const unb64url = (s: string) => atob(s.replace(/-/g, '+').replace(/_/g, '/') + '
 
 /** Compact: a version, then the fields in order, joined by '.'. Hex keeps it URL-safe. */
 export function encodeInvite(i: Invite): string {
-  const parts = ['u1', i.contract, i.groupSecret, i.role === 'secretary' ? 's' : String(i.slot), i.mySecret, i.relay ? b64url(i.relay) : '', i.blockfrost ? b64url(i.blockfrost) : ''];
+  const parts = ['u1', i.contract, i.groupSecret, i.role === 'secretary' ? 's' : String(i.slot), i.mySecret, i.relay ? b64url(i.relay) : '', i.blockfrost ? b64url(i.blockfrost) : '', i.prover ? b64url(i.prover) : ''];
   return parts.join('.').replace(/\.+$/, '');
 }
 
@@ -40,7 +45,7 @@ export class InviteError extends Error {}
 
 export function decodeInvite(text: string): Invite {
   const t = decodeURIComponent(text.trim());
-  const [v, contract, groupSecret, who, mySecret, relay, blockfrost] = t.split('.');
+  const [v, contract, groupSecret, who, mySecret, relay, blockfrost, prover] = t.split('.');
   if (v !== 'u1') throw new InviteError('This invite link is not one this page reads. Ask the secretary for a new one.');
   if (!/^[0-9a-f]{64,70}$/.test(contract ?? '') || !HEX32.test(groupSecret ?? '') || !HEX32.test(mySecret ?? '')) {
     throw new InviteError('This invite link is cut short or changed. Ask the secretary for a new one.');
@@ -52,14 +57,17 @@ export function decodeInvite(text: string): Invite {
   }
   let relayUrl: string | undefined;
   let bf: string | undefined;
+  let proverUrl: string | undefined;
   try {
     relayUrl = relay ? unb64url(relay) : undefined;
     bf = blockfrost ? unb64url(blockfrost) : undefined;
+    proverUrl = prover ? unb64url(prover) : undefined;
   } catch {
     throw new InviteError('This invite link is cut short or changed. Ask the secretary for a new one.');
   }
   if (relayUrl && !/^https?:\/\//.test(relayUrl)) throw new InviteError('The relay in this invite is not an http(s) address.');
-  return { contract, groupSecret, role: secretary ? 'secretary' : 'member', slot, mySecret, relay: relayUrl, blockfrost: bf };
+  if (proverUrl && !/^https?:\/\//.test(proverUrl)) throw new InviteError('The proof server in this invite is not an http(s) address.');
+  return { contract, groupSecret, role: secretary ? 'secretary' : 'member', slot, mySecret, relay: relayUrl, blockfrost: bf, prover: proverUrl };
 }
 
 /** The link to hand over: `${base}#/live?invite=...`. */

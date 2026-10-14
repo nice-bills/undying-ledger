@@ -257,6 +257,14 @@ GROUP=.preprod/group.json RELAY_URL=http://<laptop LAN IP>:3001 npm run invites 
   keeps the old 16-character lock.
 - **Join as someone else** (after joining) lets the next person join on the same phone. Each
   person's passbook stays in the browser under her own PIN.
+- `PROVER_URL` puts the group's proof server into each invite. A phone cannot run a proof server, so
+  in no-wallet mode it can join and read but not prove; with `PROVER_URL` (an https address, for
+  example the secretary's laptop behind a tunnel, or `http://localhost` on a laptop) it proves there.
+  What she proves goes to that machine, and the page says so. Not yet run against a remote prover.
+- With an invite the page opens on **Join your group**; the public record and the connection
+  settings sit in folds, and the 5 MB Midnight engine starts downloading while she reads.
+- After a meeting the secretary's stamps each have **Show as QR**, so a member's camera reads hers.
+  Before a stamp matches the book, a new phone says so instead of showing 0 shares.
 - While a call runs, the page shows **Sent** with the tx id as soon as the relay (or Lace) returns.
   The relay answers once Preprod has finalized the call; the rest of the wait is the indexer.
 

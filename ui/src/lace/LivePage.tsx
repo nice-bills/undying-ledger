@@ -116,8 +116,13 @@ export default function LivePage() {
       // never overwrite what a "Check my Lace setup" tap already reported
       setLace((prev) => (prev === LOOKING ? found : prev));
     }, 800);
-    return () => clearTimeout(t);
-  }, []);
+    // With an invite she will join next: fetch the 5 MB engine now, while she reads, not on her tap.
+    const warm = invite ? setTimeout(() => void loadLiveSession().catch(() => undefined), 600) : undefined;
+    return () => {
+      clearTimeout(t);
+      clearTimeout(warm);
+    };
+  }, [invite]);
 
   const connect = async () => {
     if (checking) return;
@@ -158,8 +163,12 @@ export default function LivePage() {
     setLace('Loading the Midnight engine (about 5 MB the first time)…');
     try {
       const { LiveSession } = await loadLiveSession();
-      const s = LiveSession.noWallet();
-      setLace(`No wallet. Proofs on ${s.setup.proverUri} (this machine); each call is bound with a throwaway key that holds nothing, and the group fee-key relay pays. Needs the Blockfrost ID above and the relay URL below.`);
+      const s = invite?.prover ? LiveSession.noWallet(invite.prover) : LiveSession.noWallet();
+      setLace(
+        invite
+          ? `No wallet needed. Proofs on ${s.setup.proverLocal ? 'this device' : `the group's proof server (${s.setup.proverUri})`}; the group fee key pays every fee.`
+          : `No wallet. Proofs on ${s.setup.proverUri} (this machine); each call is bound with a throwaway key that holds nothing, and the group fee-key relay pays. Needs the Blockfrost ID above and the relay URL below.`,
+      );
       setSession(s);
     } catch (e) {
       console.error(e);
@@ -220,16 +229,148 @@ export default function LivePage() {
     }
   };
 
+  const register = (
+    <>
+          <div className="prose">
+            <label className="label" htmlFor="addr">
+              Contract address
+            </label>
+            <input
+              id="addr"
+              className="addr"
+              value={address}
+              onChange={(ev) => setAddress(ev.target.value)}
+              spellCheck={false}
+              autoComplete="off"
+              placeholder="paste the address from the deploy script"
+            />
+          </div>
+          <div className="prose">
+            <label className="label" htmlFor="bf">
+              Blockfrost Preprod project ID (only without Lace)
+            </label>
+            <input
+              id="bf"
+              className="addr"
+              type="password"
+              value={token}
+              onChange={(ev) => setToken(ev.target.value)}
+              autoComplete="off"
+              placeholder="nightpreprod..."
+            />
+            <p className="note" style={{ marginTop: 4 }}>
+              Kept in this tab only. Anyone who sees a page with it can use your quota.
+            </p>
+          </div>
+          <div style={{ height: 12 }} />
+          <button className="btn" type="button" onClick={read} disabled={status === 'reading'}>
+            {status === 'reading' ? 'Reading the indexer' : 'Read the register'}
+          </button>
+          {status === 'reading' && (
+            <div className="proving on" role="status">
+              <span className="skel" style={{ width: '86%' }} />
+              <span className="skel" style={{ width: '60%' }} />
+            </div>
+          )}
+          <p className={status === 'error' ? 'err' : 'after'} role="status" data-testid="live-msg">
+            {msg}
+          </p>
+          {reg && (
+            <>
+              <div className="pub">
+                <div>
+                  <span className="label">Members</span>
+                  <b className="num">{reg.memberCount} keys</b>
+                </div>
+                <div>
+                  <span className="label">Meetings</span>
+                  <b className="num">{reg.meetings}</b>
+                </div>
+                <div>
+                  <span className="label">Phase</span>
+                  <b>{reg.phase}</b>
+                </div>
+              </div>
+              <p className="note" style={{ marginTop: 8 }}>
+                Last vendor check-in {reg.lastHeartbeat}; sunset opens {reg.graceSeconds} s after it. Fee key {reg.feeKeyEpoch}.{' '}
+                {reg.attestations} savings proofs.
+              </p>
+              <table className="ledger redact">
+                <thead>
+                  <tr>
+                    <th scope="col">Slot</th>
+                    <th scope="col">Sealed passbook</th>
+                    <th scope="col" className="r">
+                      Version
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reg.slots.map((s) => (
+                    <tr key={s.slot}>
+                      <td className="num">{s.slot}</td>
+                      <td>
+                        <span className="hash">{s.commitment.slice(0, 24)}</span>
+                      </td>
+                      <td className="r num">{s.version}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
+    </>
+  );
+  const member = (
+    <>
+          <h3 className="label" style={{ marginTop: 22 }}>
+            Member wallet
+          </h3>
+          <p className={laceErr ? 'err' : 'note'} data-testid="lace-status" role="status" style={{ marginTop: 6 }}>
+            {lace}
+          </p>
+          <div style={{ height: 10 }} />
+          {!session && (
+            <div className="pair">
+              <button className="btn ghost" type="button" onClick={connect} disabled={!!checking}>
+                {checking === 'lace' ? 'Checking Lace' : 'Check my Lace setup'}
+              </button>
+              <button className="btn ghost" type="button" onClick={noWallet} disabled={!!checking} data-testid="no-wallet">
+                {checking === 'none' ? 'Loading' : 'Use without a wallet'}
+              </button>
+            </div>
+          )}
+          {checking && (
+            <div className="proving on" role="status" data-testid="lace-checking">
+              <span className="skel" style={{ width: '72%' }} />
+              <span className="skel" style={{ width: '48%' }} />
+            </div>
+          )}
+          {session && (
+            <Suspense
+              fallback={
+                <div className="proving on" role="status">
+                  <span className="skel" style={{ width: '86%' }} />
+                  <span className="skel" style={{ width: '60%' }} />
+                </div>
+              }
+            >
+              <LiveWrite session={session} address={address} blockfrost={token} invite={invite} />
+            </Suspense>
+          )}
+    </>
+  );
+
   return (
     <section className="beat w-slate" style={{ bottom: 0 }} aria-label="Live register on Preprod" data-testid="live">
       <Leaf band={[<b key="a">Live on Preprod</b>, <a href="#/demo" key="b">Back to the demo</a>]}>
         <h2 className="disp" tabIndex={-1} ref={h} style={{ fontSize: 40 }}>
-          The public register
+          {invite ? 'Join your group' : 'The public register'}
         </h2>
-        <p className="lede">What anyone can read about a deployed group, no wallet needed. Members act on it with Lace, or with no wallet at all through the group fee-key relay.</p>
+        {!invite && <p className="lede">What anyone can read about a deployed group, no wallet needed. Members act on it with Lace, or with no wallet at all through the group fee-key relay.</p>}
         {invite && (
           <p className="note" data-testid="invite" role="status">
-            Invite read: {invite.role === 'secretary' ? 'the secretary' : `the member in slot ${invite.slot}`} of group {invite.contract.slice(0, 8)}…. Choose how to act on the book below, then pick a PIN.
+            Your invite: {invite.role === 'secretary' ? 'the secretary' : `the member in slot ${invite.slot}`}, group {invite.contract.slice(0, 8)}. Tap how to join, then pick a 6-digit PIN.
           </p>
         )}
         {inviteErr && (
@@ -237,129 +378,21 @@ export default function LivePage() {
             {inviteErr}
           </p>
         )}
-        <PreprodRecord />
-        <div className="prose">
-          <label className="label" htmlFor="addr">
-            Contract address
-          </label>
-          <input
-            id="addr"
-            className="addr"
-            value={address}
-            onChange={(ev) => setAddress(ev.target.value)}
-            spellCheck={false}
-            autoComplete="off"
-            placeholder="paste the address from the deploy script"
-          />
-        </div>
-        <div className="prose">
-          <label className="label" htmlFor="bf">
-            Blockfrost Preprod project ID (only without Lace)
-          </label>
-          <input
-            id="bf"
-            className="addr"
-            type="password"
-            value={token}
-            onChange={(ev) => setToken(ev.target.value)}
-            autoComplete="off"
-            placeholder="nightpreprod..."
-          />
-          <p className="note" style={{ marginTop: 4 }}>
-            Kept in this tab only. Anyone who sees a page with it can use your quota.
-          </p>
-        </div>
-        <div style={{ height: 12 }} />
-        <button className="btn" type="button" onClick={read} disabled={status === 'reading'}>
-          {status === 'reading' ? 'Reading the indexer' : 'Read the register'}
-        </button>
-        {status === 'reading' && (
-          <div className="proving on" role="status">
-            <span className="skel" style={{ width: '86%' }} />
-            <span className="skel" style={{ width: '60%' }} />
-          </div>
-        )}
-        <p className={status === 'error' ? 'err' : 'after'} role="status" data-testid="live-msg">
-          {msg}
-        </p>
-        {reg && (
+        {invite ? (
           <>
-            <div className="pub">
-              <div>
-                <span className="label">Members</span>
-                <b className="num">{reg.memberCount} keys</b>
-              </div>
-              <div>
-                <span className="label">Meetings</span>
-                <b className="num">{reg.meetings}</b>
-              </div>
-              <div>
-                <span className="label">Phase</span>
-                <b>{reg.phase}</b>
-              </div>
-            </div>
-            <p className="note" style={{ marginTop: 8 }}>
-              Last vendor check-in {reg.lastHeartbeat}; sunset opens {reg.graceSeconds} s after it. Fee key {reg.feeKeyEpoch}.{' '}
-              {reg.attestations} savings proofs.
-            </p>
-            <table className="ledger redact">
-              <thead>
-                <tr>
-                  <th scope="col">Slot</th>
-                  <th scope="col">Sealed passbook</th>
-                  <th scope="col" className="r">
-                    Version
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {reg.slots.map((s) => (
-                  <tr key={s.slot}>
-                    <td className="num">{s.slot}</td>
-                    <td>
-                      <span className="hash">{s.commitment.slice(0, 24)}</span>
-                    </td>
-                    <td className="r num">{s.version}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {member}
+            <details className="more" data-testid="more" open={!invite.blockfrost}>
+              <summary>The public register and the Preprod record</summary>
+              {register}
+              <PreprodRecord />
+            </details>
           </>
-        )}
-        <h3 className="label" style={{ marginTop: 22 }}>
-          Member wallet
-        </h3>
-        <p className={laceErr ? 'err' : 'note'} data-testid="lace-status" role="status" style={{ marginTop: 6 }}>
-          {lace}
-        </p>
-        <div style={{ height: 10 }} />
-        {!session && (
-          <div className="pair">
-            <button className="btn ghost" type="button" onClick={connect} disabled={!!checking}>
-              {checking === 'lace' ? 'Checking Lace' : 'Check my Lace setup'}
-            </button>
-            <button className="btn ghost" type="button" onClick={noWallet} disabled={!!checking} data-testid="no-wallet">
-              {checking === 'none' ? 'Loading' : 'Use without a wallet'}
-            </button>
-          </div>
-        )}
-        {checking && (
-          <div className="proving on" role="status" data-testid="lace-checking">
-            <span className="skel" style={{ width: '72%' }} />
-            <span className="skel" style={{ width: '48%' }} />
-          </div>
-        )}
-        {session && (
-          <Suspense
-            fallback={
-              <div className="proving on" role="status">
-                <span className="skel" style={{ width: '86%' }} />
-                <span className="skel" style={{ width: '60%' }} />
-              </div>
-            }
-          >
-            <LiveWrite session={session} address={address} blockfrost={token} invite={invite} />
-          </Suspense>
+        ) : (
+          <>
+            <PreprodRecord />
+            {register}
+            {member}
+          </>
         )}
       </Leaf>
     </section>

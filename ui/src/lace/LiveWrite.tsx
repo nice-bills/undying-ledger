@@ -24,6 +24,25 @@ const msgOf = (e: unknown) => {
   return a && !(e as { code?: string })?.code ? `Refused by the book: ${a[1].replace(/^failed assert:?\s*/i, '').replace(/\.$/, '')}.` : m;
 };
 
+/** A stamp as a QR code, so a member's phone camera can read it instead of her typing it. */
+function StampQR({ text }: { text: string }) {
+  const [svg, setSvg] = useState('');
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    if (!shown || svg) return;
+    void import('qrcode').then((q) => q.toString(text, { type: 'svg', errorCorrectionLevel: 'M', margin: 2, color: { dark: '#10261E', light: '#FFF9EE' } }).then(setSvg));
+  }, [shown, svg, text]);
+  const slot = text.split(':')[1];
+  return (
+    <>
+      <button type="button" className="linkish" onClick={() => setShown((v) => !v)} aria-expanded={shown}>
+        {shown ? 'Hide QR' : `Show as QR for slot ${slot}`}
+      </button>
+      {shown && svg && <div className="stamp-qr" role="img" aria-label={`QR code of the stamp for slot ${slot}`} data-testid={`stamp-qr-${slot}`} dangerouslySetInnerHTML={{ __html: svg }} />}
+    </>
+  );
+}
+
 export default function LiveWrite({ session, address, blockfrost, invite }: { session: LiveSession; address: string; blockfrost: string; invite?: Invite }) {
   // An invite fills in who she is; "Not you?" or "Join as someone else" drops it for typed secrets.
   const [useInvite, setUseInvite] = useState(!!invite);
@@ -241,39 +260,65 @@ export default function LiveWrite({ session, address, blockfrost, invite }: { se
     </div>
   );
 
+  const zkField = (
+    <>
+      <label className="label" htmlFor="zk" style={{ display: 'block', marginTop: 10 }}>
+        Proving keys URL
+      </label>
+      <input id="zk" className="addr" value={zk} onChange={(ev) => setZk(ev.target.value)} spellCheck={false} autoComplete="off" />
+    </>
+  );
+  const relayField = (
+      <div className="prose">
+          <label className="label" htmlFor="relay">
+            Group fee-key relay URL
+          </label>
+          <input
+            id="relay"
+            className="addr"
+            value={relay}
+            onChange={(ev) => setRelay(ev.target.value)}
+            spellCheck={false}
+            autoComplete="off"
+            inputMode="url"
+            placeholder="http://localhost:3001"
+          />
+          {noWallet && <p className="note" style={{ marginTop: 4 }}>Without a wallet the relay pays every fee, so this is required.</p>}
+          {!relay.trim() && !noWallet && (
+            <label className="consent">
+              <input type="checkbox" checked={lacePays} onChange={(ev) => setLacePays(ev.target.checked)} data-testid="lace-pays" />
+              <span>No relay: let Lace pay each fee from my own DUST.</span>
+            </label>
+          )}
+        </div>
+  );
+
   return (
     <div data-testid="live-write">
       <h3 className="label" style={{ marginTop: 22 }}>
         Act on the book
       </h3>
-      {!session.setup.proverLocal && (
-        <p className="err" role="alert" data-testid="prover-warning">
-          {session.setup.warnings[0]}
+      {!session.setup.proverLocal && invite?.prover && session.setup.proverUri === invite.prover ? (
+        <p className="note" data-testid="group-prover">
+          Your proofs are made on the group’s proof server, {invite.prover.replace(/^https?:\/\//, '')}. What you prove goes to that machine, so the group runs it itself.
         </p>
+      ) : (
+        !session.setup.proverLocal && (
+          <p className="err" role="alert" data-testid="prover-warning">
+            {session.setup.warnings[0]}
+          </p>
+        )
       )}
 
-      <div className="prose">
-        <label className="label" htmlFor="relay">
-          Group fee-key relay URL
-        </label>
-        <input
-          id="relay"
-          className="addr"
-          value={relay}
-          onChange={(ev) => setRelay(ev.target.value)}
-          spellCheck={false}
-          autoComplete="off"
-          inputMode="url"
-          placeholder="http://localhost:3001"
-        />
-        {noWallet && <p className="note" style={{ marginTop: 4 }}>Without a wallet the relay pays every fee, so this is required.</p>}
-        {!relay.trim() && !noWallet && (
-          <label className="consent">
-            <input type="checkbox" checked={lacePays} onChange={(ev) => setLacePays(ev.target.checked)} data-testid="lace-pays" />
-            <span>No relay: let Lace pay each fee from my own DUST.</span>
-          </label>
-        )}
-      </div>
+      {invite ? (
+        <details className="more" data-testid="connection">
+          <summary>Connection details, from your invite</summary>
+          {relayField}
+          <div className="prose">{zkField}</div>
+        </details>
+      ) : (
+        relayField
+      )}
 
       {!group && (
         <>
@@ -351,10 +396,7 @@ export default function LiveWrite({ session, address, blockfrost, invite }: { se
             <button type="button" className="linkish" onClick={() => setLockKind((k) => (k === 'pin' ? 'long' : 'pin'))}>
               {lockKind === 'pin' ? 'Use a long lock instead' : 'Use a 6-digit PIN instead'}
             </button>
-            <label className="label" htmlFor="zk" style={{ display: 'block', marginTop: 10 }}>
-              Proving keys URL
-            </label>
-            <input id="zk" className="addr" value={zk} onChange={(ev) => setZk(ev.target.value)} spellCheck={false} autoComplete="off" />
+            {!invite && zkField}
           </div>
           <div style={{ height: 12 }} />
           <button className="btn" type="button" onClick={join} disabled={!!busy || !address.trim()}>
@@ -436,8 +478,9 @@ export default function LiveWrite({ session, address, blockfrost, invite }: { se
               {stamps.length > 0 && (
                 <ol className="stamps" aria-label="Stamps to hand out" data-testid="stamps">
                   {stamps.map((s) => (
-                    <li key={s} className="hash">
-                      {s}
+                    <li key={s}>
+                      <span className="hash">{s}</span>
+                      <StampQR text={s} />
                     </li>
                   ))}
                 </ol>
@@ -451,7 +494,12 @@ export default function LiveWrite({ session, address, blockfrost, invite }: { se
               <button className="btn ghost" type="button" onClick={open} disabled={!!busy}>
                 {busy === 'open' ? 'Opening' : 'Open my passbook'}
               </button>
-              {opened && (
+              {opened && !opened.matches && (
+                <p className="note" data-testid="behind">
+                  This phone has no copy of your latest passbook yet. Paste the stamp from the secretary below, and your shares show here once the book confirms it.
+                </p>
+              )}
+              {opened?.matches && (
                 <div className="facts" data-testid="opened">
                   <div>
                     <span className="label">Shares</span>

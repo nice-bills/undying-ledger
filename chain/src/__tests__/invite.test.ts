@@ -6,13 +6,17 @@ import { checkPin, decodeInvite, encodeInvite, inviteUrl, lockFromPin, type Invi
 const A = 'ab'.repeat(32);
 const G = '01'.repeat(32);
 const M = 'cd'.repeat(32);
-const member: Invite = { contract: A, groupSecret: G, role: 'member', slot: 3, mySecret: M, relay: 'http://192.168.1.20:3001', blockfrost: 'nightpreprodXYZ' };
+const member: Invite = { contract: A, groupSecret: G, role: 'member', slot: 3, mySecret: M, relay: 'http://192.168.1.20:3001', blockfrost: 'nightpreprodXYZ', prover: undefined };
 
 describe('invite links', () => {
   it('round-trip a member and a secretary invite, with and without the extras', () => {
     expect(decodeInvite(encodeInvite(member))).toEqual(member);
     const sec: Invite = { contract: A, groupSecret: G, role: 'secretary', slot: 0, mySecret: M };
-    expect(decodeInvite(encodeInvite(sec))).toEqual({ ...sec, relay: undefined, blockfrost: undefined });
+    expect(decodeInvite(encodeInvite(sec))).toEqual({ ...sec, relay: undefined, blockfrost: undefined, prover: undefined });
+    // a group proof server, for phones that cannot run one; the fields before it may be empty
+    const withProver: Invite = { ...member, relay: undefined, blockfrost: undefined, prover: 'https://prover.example:6300' };
+    expect(decodeInvite(encodeInvite(withProver))).toEqual(withProver);
+    expect(() => decodeInvite(encodeInvite({ ...member, prover: 'ftp://x' }))).toThrow(/proof server/);
   });
 
   it('live in the URL fragment, so no server sees them', () => {

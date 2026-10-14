@@ -18,12 +18,18 @@ test('an invite link fills in the group and the member, leaves the address bar, 
   await app.open(`/#/live?invite=${INVITE}`);
   const live = screen.getByTestId('live');
   await expect(live.getByTestId('invite')).toContainText('the member in slot 3');
+  // a member sees her join first; the public record waits in a fold
+  await expect(live.getByRole('heading', 'Join your group')).toBeVisible();
+  await expect(live.getByTestId('more')).toBeVisible();
   // the secrets are not left in the address bar
   const href = await browser.evaluate<string>('location.href');
   expect(href.includes('invite=')).toEqual(false);
 
   await live.getByRole('button', 'Use without a wallet').tap();
   await expect(live.getByTestId('invite-join')).toContainText('slot 3');
+  // the relay URL and proving keys came with the invite and sit in their own fold
+  await expect(live.getByTestId('connection')).toBeVisible();
+  await expect(live.getByLabel('Group fee-key relay URL')).not.toBeVisible();
   // nothing to type but the PIN: no secret fields
   await expect(live.getByLabel('My member secret')).not.toBeVisible();
 

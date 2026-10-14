@@ -288,7 +288,16 @@ p .textlink{display:inline;min-height:0;padding:12px 0;font:inherit;font-weight:
 .ledger.entry td:first-child{width:34px}
 .cell{width:100%;min-width:0;min-height:44px;padding:0 6px;border:0;border-bottom:2px solid var(--rule);border-radius:0;background:transparent;color:var(--ink);font:600 16px/1 var(--sans);text-align:right}
 .stamps{margin:12px 0 0;padding:0;list-style:none}
-.stamps li{padding:8px 0;border-bottom:1px solid var(--rule);font-size:12px;user-select:all;word-break:break-all}
+.stamps li{padding:8px 0;border-bottom:1px solid var(--rule);font-size:12px;word-break:break-all}
+.stamps .hash{display:block;user-select:all}
+.stamp-qr{width:min(240px,70vw);margin:4px 0 8px;border-radius:12px;overflow:hidden}
+.stamp-qr svg{display:block;width:100%;height:auto}
+/* a fold for what a member rarely needs: the public record, connection settings */
+.more{margin-top:22px;border-top:1px solid var(--rule)}
+.more>summary{display:flex;align-items:center;min-height:44px;font:700 15px/1.3 var(--sans);cursor:pointer;list-style:none}
+.more>summary::-webkit-details-marker{display:none}
+.more>summary::after{content:'+';margin-left:auto;font-size:20px;line-height:1}
+.more[open]>summary::after{content:'\2212'}
 .boot{font:500 15px var(--sans);color:#BFD8CC;padding:32px 24px}
 .w-slate .leaf .sheet,.w-slate .sheet{--chip:#2C3834}
 

@@ -10,6 +10,8 @@
 //   APP_URL     where the app is served (default https://nice-bills.github.io/undying-ledger/)
 //   INVITE_BLOCKFROST=1  put BLOCKFROST_PROJECT_ID into each link (no-wallet members need one;
 //                        anyone holding a link can then use that project's quota)
+//   PROVER_URL  the group's proof server (https, e.g. the secretary's laptop behind a tunnel), so
+//               members on phones can prove; their private inputs go to it
 //   OUT         another output file
 import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -21,11 +23,12 @@ const groupFile = path.resolve(cwd, process.env['GROUP'] ?? '.preprod/group.json
 const out = path.resolve(cwd, process.env['OUT'] ?? path.join(path.dirname(groupFile), 'invites.html'));
 const app = process.env['APP_URL'] ?? 'https://nice-bills.github.io/undying-ledger/';
 const relay = process.env['RELAY_URL'] || undefined;
+const prover = process.env['PROVER_URL'] || undefined;
 const blockfrost = process.env['INVITE_BLOCKFROST'] === '1' ? process.env['BLOCKFROST_PROJECT_ID'] : undefined;
 if (process.env['INVITE_BLOCKFROST'] === '1' && !blockfrost) throw new Error('INVITE_BLOCKFROST=1 needs BLOCKFROST_PROJECT_ID');
 
 const g = JSON.parse(readFileSync(groupFile, 'utf8')) as { contract: string; groupSecret: string; secretarySecret: string; memberSecrets: string[] };
-const base = { contract: g.contract, groupSecret: g.groupSecret, relay, blockfrost };
+const base = { contract: g.contract, groupSecret: g.groupSecret, relay, blockfrost, prover };
 const people: { who: string; invite: Invite }[] = [
   { who: 'Secretary', invite: { ...base, role: 'secretary', slot: 0, mySecret: g.secretarySecret } },
   ...g.memberSecrets.map((mySecret, slot) => ({ who: `Member, slot ${slot}`, invite: { ...base, role: 'member' as const, slot, mySecret } })),
