@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 // Records the README demo video and the six beat screenshots from the REAL built app.
 //   npm run build && npx serve docs -l 4173     (or e2e/serve.mjs 4173)
-//   node media/record-demo.mjs http://localhost:4173/ shots   -> media/screens/beat-*.png (390x844 @2x)
-//   node media/record-demo.mjs http://localhost:4173/ video   -> media/raw.webm (390x844)
+//   node media/record-demo.mjs 'http://localhost:4173/#/demo' shots   -> media/screens/beat-*.png (390x844 @2x)
+//   node media/record-demo.mjs 'http://localhost:4173/#/demo' video   -> media/raw.webm (390x844)
 //   ffmpeg -i media/raw.webm -c:v libx264 -pix_fmt yuv420p -crf 22 -r 30 -movflags +faststart media/demo.mp4
 // PLAYWRIGHT=/path/to/playwright/index.mjs selects a Playwright install outside this repo.
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 const { chromium } = await import(process.env.PLAYWRIGHT ?? 'playwright');
-const [url = 'http://localhost:4173/', mode = 'shots'] = process.argv.slice(2);
+const [url = 'http://localhost:4173/#/demo', mode = 'shots'] = process.argv.slice(2);
 const out = fileURLToPath(new URL('.', import.meta.url));
 const shots = mode === 'shots';
 fs.mkdirSync(out + 'screens', { recursive: true });
