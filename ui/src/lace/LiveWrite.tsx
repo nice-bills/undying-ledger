@@ -427,7 +427,7 @@ export default function LiveWrite({ session, address, blockfrost, invite }: { se
                 <label className="label" htmlFor="sstamp">
                   Member’s stamp
                 </label>
-                <input id="sstamp" className="addr" value={stamp} onChange={(ev) => setStamp(ev.target.value)} spellCheck={false} autoComplete="off" placeholder="undying-stamp:0:29:4:0" />
+                <input id="sstamp" className="addr" value={stamp} onChange={(ev) => setStamp(ev.target.value)} spellCheck={false} autoComplete="off" placeholder="Paste the stamp here" />
               </div>
               <div style={{ height: 10 }} />
               <button className="btn ghost" type="button" onClick={keep} disabled={!!busy || !stamp.trim()}>
@@ -476,7 +476,7 @@ export default function LiveWrite({ session, address, blockfrost, invite }: { se
                 <label className="label" htmlFor="stamp">
                   Stamp from the secretary
                 </label>
-                <input id="stamp" className="addr" value={stamp} onChange={(ev) => setStamp(ev.target.value)} spellCheck={false} autoComplete="off" placeholder="undying-stamp:0:29:4:0" />
+                <input id="stamp" className="addr" value={stamp} onChange={(ev) => setStamp(ev.target.value)} spellCheck={false} autoComplete="off" placeholder="Paste the stamp here" />
               </div>
               <div style={{ height: 10 }} />
               <button className="btn ghost" type="button" onClick={keep} disabled={!!busy || !stamp.trim()}>
