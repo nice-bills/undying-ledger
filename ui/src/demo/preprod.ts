@@ -43,6 +43,18 @@ export type PreprodRun = {
     at: string;
     rows: { label: string; txHash: string; block: number; feeSpeck: string }[];
   };
+  /**
+   * A full group of 30 (contract v2), no member wallet: the secretary added members 5 to 29, then
+   * recorded one meeting as six pages, and member 29 made a proof slip; the relay paid every call.
+   */
+  full30?: {
+    contract: string;
+    deployTxHash: string;
+    deployBlock: number;
+    at: string;
+    addMember: { count: number; firstTxHash: string; lastTxHash: string; fromBlock: number; toBlock: number };
+    rows: { label: string; txHash: string; block: number; feeSpeck: string }[];
+  };
   /** A second group (1 h grace) where the vendor checked in; a member's sunset was then refused. */
   heartbeat?: { contract: string; deployTxHash: string; txHash: string; block: number; sunsetRefused: string };
 };
@@ -174,6 +186,63 @@ export const PREPROD_RUN: PreprodRun | null = {
         "label": "attestSavings, signed in Lace",
         "txHash": "6703d63bc57ae926b863f61f7c0593046c71ba18ff4519310bd704341b75dee1",
         "block": 2968385,
+        "feeSpeck": "1"
+      }
+    ]
+  },
+  "full30": {
+    "contract": "fd3d6c368c23c15187ab23d996b10fe42133baec0456da1015cbeed943660132",
+    "deployTxHash": "5b5f31a54e9e12e6bce84c05deed9a2fc4af0e1bd94b6c1f3dd1b72511fc29f1",
+    "deployBlock": 2972544,
+    "at": "2026-10-14T05:07:29.452Z",
+    "addMember": {
+      "count": 25,
+      "firstTxHash": "04d65cded0e8da49f4ac097319da95550b92c82fcedb918f5689635d14273e41",
+      "lastTxHash": "aba3f14d588b05940b0b8ec5f4e9b66ebe83bd9a7717b79cb8ad8a528b7c1760",
+      "fromBlock": 2972617,
+      "toBlock": 2972733
+    },
+    "rows": [
+      {
+        "label": "recordMeeting, page 0",
+        "txHash": "b46b2ce99dbfd613b3689a638befceccbd9a8cf7dde0e4a6d9f164ad53feb598",
+        "block": 2972738,
+        "feeSpeck": "1"
+      },
+      {
+        "label": "recordMeeting, page 1",
+        "txHash": "65354a7928ef48f90b1d12b022d122242cb58f12a5ae0764ca5c1f78b6afa972",
+        "block": 2972742,
+        "feeSpeck": "1"
+      },
+      {
+        "label": "recordMeeting, page 2",
+        "txHash": "94d7e81f8b66ecf985b73c84b914e39da1f4b80233b2625d1fd05b91f590987b",
+        "block": 2972747,
+        "feeSpeck": "1"
+      },
+      {
+        "label": "recordMeeting, page 3",
+        "txHash": "9d53d6e1b1c1c2a65a18c30d9f2feb78b3eb3d5ff11e52c228f344137eecf73a",
+        "block": 2972752,
+        "feeSpeck": "1"
+      },
+      {
+        "label": "recordMeeting, page 4",
+        "txHash": "1ed5074e71e19125a3c3bd636ae9deb8c54394bc65324e438ffd7bfc41697b55",
+        "block": 2972757,
+        "feeSpeck": "1"
+      },
+      {
+        "label": "recordMeeting, page 5",
+        "txHash": "287e72e6e83e15bebcf14f853d132548409bf60c9bcfd9a7dcff654db04362c4",
+        "block": 2972761,
+        "feeSpeck": "1"
+      },
+      {
+        "label": "attestSavings, member 29",
+        "txHash": "77759e16dc0862a5baa8f6608b99dce887023296ff31b7ea0c3004b29c3f561f",
+        "block": 2972766,
         "feeSpeck": "1"
       }
     ]

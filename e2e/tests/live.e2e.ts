@@ -17,6 +17,9 @@ test('#/live renders and says there is no Lace wallet', { tags: ['live'] }, asyn
   // the recorded Preprod run is shown with no wallet and no token
   await expect(live.getByTestId('preprod-record')).toContainText('Ran on Preprod');
   await expect(live.getByTestId('preprod-record')).toContainText('recordMeeting');
+  // the full group of 30: six meeting pages and a proof by member 29
+  await expect(live.getByTestId('preprod-30')).toContainText('recordMeeting, page 5');
+  await expect(live.getByTestId('preprod-30')).toContainText('attestSavings, member 29');
 
   // Tapping the check gives the install hint, and no write controls appear without a wallet.
   await live.getByRole('button', 'Check my Lace setup').tap();

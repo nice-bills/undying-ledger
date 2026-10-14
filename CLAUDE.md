@@ -70,6 +70,9 @@ Pinned versions (Preprod support matrix, 9 Oct 2026): Compact 0.31.1, compact-ru
 - `scripts/browser-preprod.mjs` (output `.preprod/browser-run-invite.json`): invite + PIN join, stamp, `attestSavings` `91669b57…ecd178` (block 2,972,000; Sent at 30 s, result at 37 s), `voteSecretary` `bc13d127…eead3` (2,972,005), leave, rejoin with typed secrets and the same PIN opened the same passbook. Fees 1 SPECK (indexer `paidFees`).
 - Not tested: scanning a QR card with a real phone; the invite and PIN with Lace (same code path for the lock, not run).
 
+**A full group of 30 on Preprod (14 Oct 2026, no member wallet)**
+- Contract `fd3d6c36…660132` (deploy `5b5f31a5…fc29f1`, block 2,972,544, 5 members, 7 days grace, same fee key as v2), secrets in `.preprod/group4.json`. `npm run group30:preprod -w chain` (`chain/src/scripts/group30.ts`, output `.preprod/group30-run.json`): 25 `addMember`, `recordMeeting` as six pages (blocks 2,972,738 to 2,972,761), `attestSavings` by member 29 (2,972,766); 32 calls, 1 SPECK each, all through the relay; all 30 stamps open the book. Shown on `#/live` (`PREPROD_RUN.full30`). The relay's `addMember` cap went from 10 to 30 an hour for this.
+
 **Still only tested with mocks**
 - Lace refusal paths (a wallet that refuses `payFees:false`, or adds its own fee), "Let Lace pay", `sunset` / `voteSecretary` through Lace, Lace on other browsers or phones.
 - (Answered 13 Oct: `#/live` "Use without a wallet" ran on Preprod in headless Chromium, `scripts/browser-preprod.mjs`: join, keep stamp, attestSavings `761e7bc2…c9246e` (block 2,956,914), voteSecretary `89a0afbb…3e360e` (2,956,919). So browser Blockfrost CORS, browser private state, and browser to local proof server all work. First run found `Buffer is not defined` in the browser hex helpers, fixed in `chain/src/hex.ts`; the Lace path had the same bug.)
@@ -88,7 +91,7 @@ Pinned versions (Preprod support matrix, 9 Oct 2026): Compact 0.31.1, compact-ru
 - Never use `pkill -f <pattern>` in a tool command: it matches the tool's own shell.
 
 **Next steps, in order**
-1. Done 13 Oct: Lace `payFees:false` on the owner's laptop. Done 14 Oct: invite link/QR, PIN, sent, join as someone else (see above). Next: scan a QR card with a real phone.
+1. Done 13 Oct: Lace `payFees:false` on the owner's laptop. Done 14 Oct: invite link/QR, PIN, sent, join as someone else (see above). Done 14 Oct: a full group of 30 on Preprod. Next: scan a QR card with a real phone.
 2. Deck (Google Slides "Undying Ledger - AKINDO Midnight Buildathon", owner's Drive): slides 9, 12, 13 and 14 updated in place on 12 Oct to the Preprod run (1 SPECK fee, 5 calls by a 0-DUST caller, verified vs not-yet-verified split; heartbeat moved to verified); slides 1, 12, 13, 14 updated again on 13 Oct for v2 (9 circuits, 66 tests, 14 member calls at 0 DUST, no-wallet from a browser verified). Updated again on 13 Oct after the Lace run: slide 12 (72 tests, 16 member calls), slide 13 (Lace on Preprod moved to verified; Lace on phones and other browsers, and a wallet that refuses payFees:false, still not verified), slide 14 (Wave 3: a pilot group, Mainnet fee). 14 Oct: slide 12 (78 tests, 18 member calls), slide 13 (verified: browser join by invite link and PIN; not verified: Lace or a QR scan on a real phone).
 3. The owner submits on AKINDO personally. **Do not submit, post publicly, or spend money without the owner's explicit yes.** Aim for 17 Oct.
 

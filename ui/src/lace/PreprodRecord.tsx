@@ -167,6 +167,46 @@ export function PreprodRecord() {
           </table>
         </>
       )}
+      {r.full30 && (
+        <>
+          <span className="label" style={{ display: 'block', marginTop: 18 }}>
+            A full group of 30, {r.full30.at.slice(0, 10)}
+          </span>
+          <p style={{ marginTop: 4 }}>
+            Contract{' '}
+            <a className="textlink" href={contractLink(r.full30.contract)} target="_blank" rel="noreferrer">
+              {short(r.full30.contract)}
+            </a>
+            . The secretary added {r.full30.addMember.count} members (blocks {r.full30.addMember.fromBlock.toLocaleString('en')} to {r.full30.addMember.toBlock.toLocaleString('en')}), then recorded one meeting for all 30 as six pages. No member wallet; the group fee key paid every call, 1 SPECK each.
+          </p>
+          <table className="ledger" data-testid="preprod-30">
+            <thead>
+              <tr>
+                <th scope="col">Call</th>
+                <th scope="col">Transaction</th>
+                <th scope="col" className="r">
+                  Fee
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {r.full30.rows.map((row) => (
+                <tr key={row.txHash}>
+                  <th scope="row">{row.label}</th>
+                  <td>
+                    <a className="textlink" href={txLink(row.txHash)} target="_blank" rel="noreferrer">
+                      {short(row.txHash)}
+                    </a>
+                  </td>
+                  <td className="r num" style={{ whiteSpace: 'nowrap' }}>
+                    {row.feeSpeck} SPECK
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
       {r.heartbeat && (
         <p className="note">
           On a second group (
