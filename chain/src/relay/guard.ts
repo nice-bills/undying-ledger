@@ -30,7 +30,7 @@ const DAY = 24 * HOUR;
 export const DEFAULT_LIMITS: GuardLimits = {
   perHour: 40,
   perDay: 150,
-  perCircuitPerHour: { recordMeeting: 18, attestSavings: 10, voteSecretary: 30, addMember: 10, handoverSecretary: 3, rotateFeeKey: 3, sunset: 3 },
+  perCircuitPerHour: { recordMeeting: 18, attestSavings: 10, voteSecretary: 30, addMember: 30, handoverSecretary: 3, rotateFeeKey: 3, sunset: 3 },
   reserveSpeck: 1_000_000n, // about 1,000 calls at the Preprod fee plus SDK overhead
   lowSpeck: 10_000_000n,
 };

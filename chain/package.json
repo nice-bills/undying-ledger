@@ -17,7 +17,8 @@
     "sunset:preprod": "MIDNIGHT_NETWORK=preprod vite-node src/scripts/sunset.ts",
     "heartbeat:preprod": "MIDNIGHT_NETWORK=preprod vite-node src/scripts/heartbeat.ts",
     "burner:preprod": "MIDNIGHT_NETWORK=preprod vite-node src/scripts/burner-run.ts",
-    "invites": "vite-node src/scripts/invites.ts"
+    "invites": "vite-node src/scripts/invites.ts",
+    "group30:preprod": "MIDNIGHT_NETWORK=preprod vite-node src/scripts/group30.ts"
   },
   "dependencies": {
     "@midnight-ntwrk/compact-runtime": "0.16.0",

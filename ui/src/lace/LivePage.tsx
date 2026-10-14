@@ -54,9 +54,19 @@ function params(): URLSearchParams {
  * read once and taken out of the address bar and this tab's history entry, so it is not left on
  * screen or offered back by the browser.
  */
+// Read once and kept while this tab stays on #/live (React's dev mode mounts the page twice);
+// forgotten when she leaves, so a later visit does not bring her secrets back.
+let taken: { invite?: Invite; error?: string } | undefined;
+addEventListener('hashchange', () => {
+  if (!location.hash.startsWith('#/live')) taken = undefined;
+});
 function takeInvite(): { invite?: Invite; error?: string } {
   const raw = params().get('invite');
-  if (!raw) return {};
+  if (!raw) return taken ?? {};
+  taken = readInvite(raw);
+  return taken;
+}
+function readInvite(raw: string): { invite?: Invite; error?: string } {
   try {
     history.replaceState(history.state, '', location.href.replace(/([?&])invite=[^&]*&?/, '$1').replace(/[?&]$/, ''));
   } catch {
