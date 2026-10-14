@@ -29,6 +29,7 @@ Undying Ledger is a private record book for a village savings and loan associati
 | `e2e/` | tester.army e2e suite (six-beat story, refusals, legal links, console errors, `#/live` smoke) |
 | `docs/` | Production build. Pages serves the `gh-pages` branch, which `.github/workflows/pages.yml` keeps equal to `docs/`. |
 | `media/` | launch-wide.mp4 and launch-tall.mp4 (57 s, `media/launch/make.sh`, opens on the landing), demo.mp4 (82 s, cash-box UI), demo-narrated.mp4 (82 s; the synthetic en-NG voice from the earlier cut, edge-tts `en-NG-EzinneNeural`, re-timed to the new beats), demo.srt, screens/, live/, strip.jpg, record-demo.mjs |
+| `chain/src/invite.ts`, `chain/src/scripts/invites.ts` | Invite links (URL fragment) and the PIN-to-lock derivation; `npm run invites -w chain` prints QR cards to `.preprod/invites.html` |
 | `scripts/preprod.sh` | One-command Preprod run: `check \| up \| deploy \| measure [--apply] \| down` |
 
 ## Commands
@@ -36,7 +37,7 @@ Undying Ledger is a private record book for a village savings and loan associati
 ```bash
 npm ci
 npm run compact      # compactc 0.31.1 (pinned; 0.34+ targets ledger 9 and cannot deploy to Preprod)
-npm test             # 25 contract + 42 ui + 5 relay guard = 72 passing
+npm test             # 25 contract + 43 ui + 5 relay guard + 5 invite = 78 passing
 npm run typecheck    # contract, ui, chain
 npm run build        # ui/dist -> docs/ (commit docs/ so Pages updates)
 npm run dev          # local; open #/live?fake=1 for the fake joined session
@@ -62,7 +63,12 @@ Pinned versions (Preprod support matrix, 9 Oct 2026): Compact 0.31.1, compact-ru
 - Own v2 group `2e196521…c20e5da` (deploy `1de57abe…25c7dbba`, 18:04 UTC, 1 h grace), its relay on :3001. Secrets in the laptop's `.preprod/group.json` (not in the cloud container).
 - Through `#/live` with Lace (`payFees: false`, relay adds the fee): secretary `recordMeeting` `625e2fe2…663f8186` (block 2,968,251) and member 0 `attestSavings` `6703d63b…1b75dee1` (block 2,968,385), 1 SPECK each, `SUCCESS`. So Lace honours `payFees:false` and the relay's `balanceFinalizedTransaction` accepts Lace's transaction. Shown on `#/live` (`PREPROD_RUN.lace`) and as a fifth line on the landing.
 - Bugs it found, fixed with tests: `Buffer is not defined` (Lace's Bech32m keys go through `wallet-sdk-address-format`, which uses a bare `Buffer`; `ui/src/lace/buffer-shim.ts`); the first Join's providers were cached with its passbook lock; a lock different from the browser store's first one failed with an empty AES-GCM `OperationError` (blank error line); `findDeployedContract` had no timeout (90 s now). The page now logs a failed action's error and cause.
-- Owner feedback: about 70 s from Sign to stamps on `recordMeeting` (not split by stage), and typing contract, secrets and a 16-character lock is too much for members. Proposed, waiting for the owner's yes: per-stage timing, show "sent" when the relay accepts, invite link/QR join (secrets in the URL fragment), a short PIN instead of the lock, a "leave / join as someone else" button.
+- Owner feedback: about 70 s from Sign to stamps on `recordMeeting` (not split by stage), and typing contract, secrets and a 16-character lock is too much for members. The owner approved four fixes on 14 Oct and dropped per-stage timing.
+
+**Member join, 14 Oct 2026 (ran on Preprod from headless Chromium, no wallet, group v2 `7a89acd2…`)**
+- Invite link (`chain/src/invite.ts`, `#/live?invite=u1.<contract>.<group>.<slot|s>.<own secret>.<relay b64url>`, in the URL fragment, stripped from the address bar on read), QR cards from `npm run invites -w chain` (`.preprod/invites.html`, mode 600), a 6-digit PIN (PBKDF2-SHA256 600k rounds, salted with contract + own secret, becomes a Midnight.js-valid lock; "Use a long lock instead" keeps the old one), "Join as someone else" (`LiveSession.leave()`), and a `sent` stage with the tx id when the relay or Lace returns (the relay answers after `Finalized`; the rest is the indexer).
+- `scripts/browser-preprod.mjs` (output `.preprod/browser-run-invite.json`): invite + PIN join, stamp, `attestSavings` `91669b57…ecd178` (block 2,972,000; Sent at 30 s, result at 37 s), `voteSecretary` `bc13d127…eead3` (2,972,005), leave, rejoin with typed secrets and the same PIN opened the same passbook. Fees 1 SPECK (indexer `paidFees`).
+- Not tested: scanning a QR card with a real phone; the invite and PIN with Lace (same code path for the lock, not run).
 
 **Still only tested with mocks**
 - Lace refusal paths (a wallet that refuses `payFees:false`, or adds its own fee), "Let Lace pay", `sunset` / `voteSecretary` through Lace, Lace on other browsers or phones.
@@ -70,7 +76,7 @@ Pinned versions (Preprod support matrix, 9 Oct 2026): Compact 0.31.1, compact-ru
 - (`heartbeat` ran on Preprod on 12 Oct: second group `f1c7d8dc…ec3485` (1 h grace, deploy `c0a2ab57…feaf8a`, block 2,955,001), `heartbeat` `4fd7f18c…73d706` (block 2,955,062, 1 SPECK from the vendor's own DUST; the relay does not sponsor admin calls), then a member's `sunset` was refused by the circuit, `npm run heartbeat:preprod -w chain`, secrets in `.preprod/group2.json`. `sunset` ran: `76cadb73…3fd0f9`, block 2,950,326, by a 0-DUST member through the relay, `npm run sunset:preprod -w chain`. The group is in SUNSET; after it, `recordMeeting` `ec0e88f8…57c99a` (block 2,950,410) and `attestSavings` `288b0711…d6fc55` (block 2,950,415) ran through the relay with 0 DUST.)
 
 **Done and verified in the cloud session**
-- 66 unit tests (72 since the Lace run), typecheck, e2e passed / 2 agentic skipped at 390 and 430 (e2e needs Node >= 22.22.3; the container has 22.22.0, so a Node 24 tarball was used).
+- 66 unit tests (72 after the Lace run, 78 with the invite and PIN), typecheck, e2e passed / 2 agentic skipped at 390 and 430 (e2e needs Node >= 22.22.3; the container has 22.22.0, so a Node 24 tarball was used).
 - UI rebuilt as the cash box (owner's choice); launch video `media/launch-wide.mp4` and `-tall.mp4` (57 s, opens on the landing, `media/launch/make.sh`, ends on the Preprod record in `#/live`); demo.mp4 and the narrated cut (82 s; narration re-timed to the new beats). All re-rendered after the measurement, so receipts show 1 SPECK.
 - Demo step rail (14 Oct): Back / Next pills, "Step N of 6" with the step name, six bars (done, current in saffron); the bare 1 to 6 numbers confused the owner. Rendered at 390 and 430.
 - Proving keys ship in `docs/zk/` so `#/live` can prove from Pages.
@@ -82,7 +88,7 @@ Pinned versions (Preprod support matrix, 9 Oct 2026): Compact 0.31.1, compact-ru
 - Never use `pkill -f <pattern>` in a tool command: it matches the tool's own shell.
 
 **Next steps, in order**
-1. Done 13 Oct: Lace `payFees:false` on the owner's laptop (see above). Next, if the owner agrees: the member UX items listed under "Lace on Preprod".
+1. Done 13 Oct: Lace `payFees:false` on the owner's laptop. Done 14 Oct: invite link/QR, PIN, sent, join as someone else (see above). Next: scan a QR card with a real phone.
 2. Deck (Google Slides "Undying Ledger - AKINDO Midnight Buildathon", owner's Drive): slides 9, 12, 13 and 14 updated in place on 12 Oct to the Preprod run (1 SPECK fee, 5 calls by a 0-DUST caller, verified vs not-yet-verified split; heartbeat moved to verified); slides 1, 12, 13, 14 updated again on 13 Oct for v2 (9 circuits, 66 tests, 14 member calls at 0 DUST, no-wallet from a browser verified). Updated again on 13 Oct after the Lace run: slide 12 (72 tests, 16 member calls), slide 13 (Lace on Preprod moved to verified; Lace on phones and other browsers, and a wallet that refuses payFees:false, still not verified), slide 14 (Wave 3: a pilot group, Mainnet fee).
 3. The owner submits on AKINDO personally. **Do not submit, post publicly, or spend money without the owner's explicit yes.** Aim for 17 Oct.
 

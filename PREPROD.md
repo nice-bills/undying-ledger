@@ -260,6 +260,11 @@ GROUP=.preprod/group.json RELAY_URL=http://<laptop LAN IP>:3001 npm run invites 
 - While a call runs, the page shows **Sent** with the tx id as soon as the relay (or Lace) returns.
   The relay answers once Preprod has finalized the call; the rest of the wait is the indexer.
 
+Ran on Preprod on 14 Oct 2026 from headless Chromium with no wallet (`scripts/browser-preprod.mjs`
+against group v2): invite + PIN join, a stamp, `attestSavings` (block 2,972,000, Sent at 30 s,
+result at 37 s), `voteSecretary` (2,972,005), **Join as someone else**, and a rejoin with the same
+PIN that opened the same passbook. Not yet: scanning a printed card with a phone camera.
+
 ### 10. Optional: the group fee-key relay
 
 ```bash

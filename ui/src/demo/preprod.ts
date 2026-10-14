@@ -93,6 +93,18 @@ export const PREPROD_RUN: PreprodRun | null = {
         "txHash": "89a0afbb9142018a9d75ca768675d3ca9645ad5a64e28dfa34b597f01d3e360e",
         "block": 2956919,
         "feeSpeck": "1"
+      },
+      {
+        "label": "attestSavings, invite link and PIN",
+        "txHash": "91669b577bbdbcf1c13d9bac43f8aa803ca0cde77d3a603c4124c2eab1ecd178",
+        "block": 2972000,
+        "feeSpeck": "1"
+      },
+      {
+        "label": "voteSecretary, invite link and PIN",
+        "txHash": "bc13d12799f6d2fe0b1f31e7e09749a211b93c1b43a5d804db5f9d05da9eead3",
+        "block": 2972005,
+        "feeSpeck": "1"
       }
     ],
     "rows": [

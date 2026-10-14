@@ -97,7 +97,7 @@ export function PreprodRecord() {
             <a className="textlink" href={contractLink(r.v2.contract)} target="_blank" rel="noreferrer">
               {short(r.v2.contract)}
             </a>
-            , up to 30 members. Every call was proved, bound by a throwaway key that holds nothing, and paid by the group fee key. After sunset three of five members elected a new secretary, who rebuilt the book from their stamps and recorded a meeting. The last two calls came from this page in a browser, with no wallet.
+            , up to 30 members. Every call was proved, bound by a throwaway key that holds nothing, and paid by the group fee key. After sunset three of five members elected a new secretary, who rebuilt the book from their stamps and recorded a meeting. The last four calls came from this page in a browser, with no wallet; the last two after joining from an invite link with a 6-digit PIN.
           </p>
           <table className="ledger" data-testid="preprod-v2">
             <thead>

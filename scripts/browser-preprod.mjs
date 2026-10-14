@@ -43,11 +43,12 @@ const wait = async (label, f) => {
 };
 try {
   await p.goto(`${base}#/live?invite=${invite}`);
-  out.inviteLeftInUrl = (await p.evaluate(() => location.href)).includes('invite=');
   await live.getByLabel('Blockfrost Preprod project ID (only without Lace)').fill(token);
   await live.getByRole('button', { name: 'Use without a wallet' }).click();
   await live.getByTestId('live-write').waitFor(T);
   await live.getByTestId('invite-join').waitFor(T);
+  // read after the live page has loaded (it strips the invite on its first render)
+  out.inviteLeftInUrl = (await p.evaluate(() => location.href)).includes('invite=');
   await live.getByLabel('6-digit PIN for this phone').fill(PIN);
   await wait('join', async () => {
     await live.getByRole('button', { name: 'Join this group' }).click();
