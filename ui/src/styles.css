@@ -71,6 +71,8 @@ a{color:inherit}
 .w-slate .err{color:var(--red-on-dark)}
 .screen > .err{margin:10px 22px 0;color:var(--on);background:var(--red);border-radius:14px;padding:10px 14px}
 .textlink{font:600 14px/1.3 var(--sans);text-decoration:underline;text-underline-offset:3px;padding:10px 0;min-height:44px;display:inline-flex;align-items:center}
+/* inside running text a link keeps the line's height; its padding still gives a tall tap area */
+p .textlink{display:inline;min-height:0;padding:12px 0;font:inherit;font-weight:600}
 
 /* the cash box */
 .boxstage{position:relative;width:min(330px,86%);margin:30px auto 0}
@@ -148,8 +150,9 @@ a{color:inherit}
 .btn.ghost{background:transparent;color:var(--ink);border:2px solid currentColor}
 .btn.light{background:var(--cream);color:var(--emerald-2)}
 .btn:disabled{opacity:.55}
-.pair{display:flex;gap:10px}
-.pair .btn{flex:1 1 0;padding:0 12px;white-space:nowrap}
+.pair{display:flex;flex-wrap:wrap;gap:10px}
+/* side by side when both labels fit, one per row when they do not (large text, narrow phones) */
+.pair .btn{flex:1 1 max-content;padding:0 12px;white-space:nowrap}
 
 /* beat 2: her book */
 .card{border-radius:20px;padding:14px 16px}
@@ -315,3 +318,4 @@ a{color:inherit}
   button:active,button:not(:disabled):active,a.btn:active{transform:none}
   .gauge .fill,.burn i{transition:none}
 }
+.ledger td.r,.ledger th.r{padding-left:12px}

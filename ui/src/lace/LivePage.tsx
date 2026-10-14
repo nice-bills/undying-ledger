@@ -79,6 +79,16 @@ function readInvite(raw: string): { invite?: Invite; error?: string } {
   }
 }
 
+/** The write path with its wasm engine. A dropped download on a phone is retried once. */
+async function loadLiveSession() {
+  try {
+    return await import('./live-session');
+  } catch {
+    await new Promise((r) => setTimeout(r, 1500));
+    return import('./live-session');
+  }
+}
+
 function findLace(): InitialAPI | undefined {
   const w = (globalThis as unknown as { midnight?: Record<string, unknown> }).midnight;
   if (!w) return undefined;
@@ -94,7 +104,7 @@ export default function LivePage() {
   const [msg, setMsg] = useState('');
   const [lace, setLace] = useState<string>(LOOKING);
   const [laceErr, setLaceErr] = useState(false);
-  const [checking, setChecking] = useState(false);
+  const [checking, setChecking] = useState<null | 'lace' | 'none'>(null);
   const [session, setSession] = useState<LiveSession | null>(null);
   const h = useRef<HTMLHeadingElement>(null);
 
@@ -122,7 +132,7 @@ export default function LivePage() {
       setLaceErr(true);
       return setLace('No Lace wallet in this browser. Install Lace (Midnight), switch it to Preprod, then reload this page.');
     }
-    setChecking(true);
+    setChecking('lace');
     setLaceErr(false);
     setLace('Asking Lace to connect to Preprod…');
     try {
@@ -136,25 +146,27 @@ export default function LivePage() {
       setLaceErr(true);
       setLace(redact((e as Error).message));
     } finally {
-      setChecking(false);
+      setChecking(null);
     }
   };
 
   // No wallet: prove on this machine's proof server, bind with a burner key, let the relay pay.
   const noWallet = async () => {
     if (checking) return;
-    setChecking(true);
+    setChecking('none');
     setLaceErr(false);
+    setLace('Loading the Midnight engine (about 5 MB the first time)…');
     try {
-      const { LiveSession } = await import('./live-session');
+      const { LiveSession } = await loadLiveSession();
       const s = LiveSession.noWallet();
       setLace(`No wallet. Proofs on ${s.setup.proverUri} (this machine); each call is bound with a throwaway key that holds nothing, and the group fee-key relay pays. Needs the Blockfrost ID above and the relay URL below.`);
       setSession(s);
     } catch (e) {
+      console.error(e);
       setLaceErr(true);
-      setLace(redact((e as Error).message));
+      setLace(redact(`Could not load the Midnight engine on this device (${(e as Error).message || (e as Error).name}). It is about 5 MB; check the connection and tap again.`));
     } finally {
-      setChecking(false);
+      setChecking(null);
     }
   };
 
@@ -323,11 +335,11 @@ export default function LivePage() {
         <div style={{ height: 10 }} />
         {!session && (
           <div className="pair">
-            <button className="btn ghost" type="button" onClick={connect} disabled={checking}>
-              {checking ? 'Checking Lace' : 'Check my Lace setup'}
+            <button className="btn ghost" type="button" onClick={connect} disabled={!!checking}>
+              {checking === 'lace' ? 'Checking Lace' : 'Check my Lace setup'}
             </button>
-            <button className="btn ghost" type="button" onClick={noWallet} disabled={checking} data-testid="no-wallet">
-              Use without a wallet
+            <button className="btn ghost" type="button" onClick={noWallet} disabled={!!checking} data-testid="no-wallet">
+              {checking === 'none' ? 'Loading' : 'Use without a wallet'}
             </button>
           </div>
         )}
