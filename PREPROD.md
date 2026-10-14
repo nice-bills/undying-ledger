@@ -260,7 +260,7 @@ GROUP=.preprod/group.json RELAY_URL=http://<laptop LAN IP>:3001 npm run invites 
 - `PROVER_URL` puts the group's proof server into each invite. A phone cannot run a proof server, so
   in no-wallet mode it can join and read but not prove; with `PROVER_URL` (an https address, for
   example the secretary's laptop behind a tunnel, or `http://localhost` on a laptop) it proves there.
-  What she proves goes to that machine, and the page says so. Not yet run against a remote prover.
+  What she proves goes to that machine, and the page says so. Ran on 14 Oct from headless Chromium with the prover at another address of the build machine (`attestSavings` `40da71f8…41f049`, block 2,982,567); not yet from a phone.
 - With an invite the page opens on **Join your group**; the public record and the connection
   settings sit in folds, and the 5 MB Midnight engine starts downloading while she reads.
 - After a meeting the secretary's stamps each have **Show as QR**, so a member's camera reads hers.

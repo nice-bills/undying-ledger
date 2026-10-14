@@ -244,7 +244,13 @@ export const PREPROD_RUN: PreprodRun | null = {
         "txHash": "77759e16dc0862a5baa8f6608b99dce887023296ff31b7ea0c3004b29c3f561f",
         "block": 2972766,
         "feeSpeck": "1"
-      }
+      },
+        {
+          "label": "attestSavings, member 8, group proof server",
+          "txHash": "40da71f8454ec50efb310b7577bc43bbff156bda20d9583beb155c0d5e41f049",
+          "block": 2982567,
+          "feeSpeck": "1"
+        }
     ]
   },
   "heartbeat": {

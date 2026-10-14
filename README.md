@@ -79,6 +79,7 @@ Contract v2 deployed with five members as [`fd3d6c36…660132`](https://preprod.
 
 - After the meeting, each of the 30 members' stamps opened her sealed line on the book (checked with the real `passbookCommitment` against the ledger), and the ledger reads 30 members and 1 meeting.
 - A meeting for 30 is six transactions, one per page of five; they landed in six blocks about 20 s apart.
+- **A group proof server** (14 Oct): member 8 joined from an invite that names the group's proof server (`PROVER_URL`, here this machine's network address `192.0.2.2:6300`, which the page treats as remote), kept her stamp, and made a proof slip, [`40da71f8…41f049`](https://preprod.midnightexplorer.com/transactions/40da71f8454ec50efb310b7577bc43bbff156bda20d9583beb155c0d5e41f049) (block 2,982,567, 1 SPECK through the relay, 32 s from tap to result). The page named the server before she joined, and every proof request went to it. This is the path for phones, which cannot run a proof server; it ran from headless Chromium, not yet from a phone (a phone needs the prover over https).
 
 ### Lace on Preprod, with `payFees: false` (13 October 2026)
 
