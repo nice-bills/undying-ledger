@@ -28,7 +28,7 @@ test('#/live without a wallet: the relay is the only way to pay, and a Blockfros
   // Joining with no Blockfrost ID is refused before any network call.
   await live.getByLabel('My member secret').fill(HEX);
   await live.getByLabel('Group secret').fill(HEX);
-  await live.getByLabel('Passbook lock for this phone').fill('Kpalsi-Group-2026!x');
+  await live.getByLabel('6-digit PIN for this phone').fill('482916');
   await live.getByRole('button', 'Join this group').tap();
   await expect(live.getByTestId('write-err')).toContainText('Blockfrost');
 

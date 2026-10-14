@@ -5,9 +5,8 @@
 // chain/src/browser.ts + chain/src/api.ts. Loaded on demand (#/live), so the simulator demo does
 // not ship Midnight.js; the write path is a further chunk loaded only after Lace connects.
 //
-// NOT VERIFIED against a live deployment: the build machine had no Docker, no Lace and no tNIGHT.
-// It is typechecked, the write wiring is unit-tested with a mocked Lace and mocked providers,
-// and the no-Lace state is covered by the e2e suite.
+// RAN ON PREPROD, 13 Oct 2026, with Lace and with no wallet (README). The invite link and the PIN
+// (14 Oct) are unit- and e2e-tested only, not yet run against Preprod.
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { ledger, Phase } from '@undying-ledger/contract';
 import type { InitialAPI } from '@midnight-ntwrk/dapp-connector-api';
@@ -15,6 +14,7 @@ import { Leaf } from '../a2/paper';
 import type { LiveSession } from './live-session';
 import { PreprodRecord } from './PreprodRecord';
 import { PREPROD_RUN } from '../demo/preprod';
+import { decodeInvite, type Invite } from '@undying-ledger/chain/src/invite';
 
 const LiveWrite = lazy(() => import('./LiveWrite'));
 const LOOKING = 'Looking for the Lace wallet…';
@@ -49,6 +49,26 @@ function params(): URLSearchParams {
   return new URLSearchParams(q);
 }
 
+/**
+ * An invite link (#/live?invite=...) fills in the group, the member's secrets and the relay. It is
+ * read once and taken out of the address bar and this tab's history entry, so it is not left on
+ * screen or offered back by the browser.
+ */
+function takeInvite(): { invite?: Invite; error?: string } {
+  const raw = params().get('invite');
+  if (!raw) return {};
+  try {
+    history.replaceState(history.state, '', location.href.replace(/([?&])invite=[^&]*&?/, '$1').replace(/[?&]$/, ''));
+  } catch {
+    /* a sandboxed frame may refuse; the invite still works */
+  }
+  try {
+    return { invite: decodeInvite(raw) };
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+}
+
 function findLace(): InitialAPI | undefined {
   const w = (globalThis as unknown as { midnight?: Record<string, unknown> }).midnight;
   if (!w) return undefined;
@@ -56,8 +76,9 @@ function findLace(): InitialAPI | undefined {
 }
 
 export default function LivePage() {
-  const [address, setAddress] = useState(() => params().get('contract') ?? PREPROD_RUN?.contract ?? '');
-  const [token, setToken] = useState('');
+  const [{ invite, error: inviteErr }] = useState(takeInvite);
+  const [address, setAddress] = useState(() => invite?.contract ?? params().get('contract') ?? PREPROD_RUN?.contract ?? '');
+  const [token, setToken] = useState(invite?.blockfrost ?? '');
   const [reg, setReg] = useState<Register | null>(null);
   const [status, setStatus] = useState<'idle' | 'reading' | 'error'>('idle');
   const [msg, setMsg] = useState('');
@@ -184,6 +205,16 @@ export default function LivePage() {
           The public register
         </h2>
         <p className="lede">What anyone can read about a deployed group, no wallet needed. Members act on it with Lace, or with no wallet at all through the group fee-key relay.</p>
+        {invite && (
+          <p className="note" data-testid="invite" role="status">
+            Invite read: {invite.role === 'secretary' ? 'the secretary' : `the member in slot ${invite.slot}`} of group {invite.contract.slice(0, 8)}…. Choose how to act on the book below, then pick a PIN.
+          </p>
+        )}
+        {inviteErr && (
+          <p className="err" role="alert" data-testid="invite-err">
+            {inviteErr}
+          </p>
+        )}
         <PreprodRecord />
         <div className="prose">
           <label className="label" htmlFor="addr">
@@ -305,7 +336,7 @@ export default function LivePage() {
               </div>
             }
           >
-            <LiveWrite session={session} address={address} blockfrost={token} />
+            <LiveWrite session={session} address={address} blockfrost={token} invite={invite} />
           </Suspense>
         )}
       </Leaf>

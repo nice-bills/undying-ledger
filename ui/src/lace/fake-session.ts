@@ -5,13 +5,13 @@
 // import.meta.env.DEV, so a production build drops this file. Every figure here is made up.
 import type { Entry } from '@undying-ledger/contract';
 import { LiveError } from '@undying-ledger/chain/src/errors';
-import type { GroupView, Role, Stage } from './live-session';
+import type { GroupView, Role, Stage, StageListener } from './live-session';
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const STEP = Number(new URLSearchParams(location.hash.split('?')[1] ?? '').get('step') ?? 700);
 
 export function fakeSession() {
-  let listener: ((s: Stage) => void) | undefined;
+  let listener: StageListener | undefined;
   let fee = { relayUrl: '', letLacePay: false };
   let me: { role: Role; slot: number } | undefined;
   const g: GroupView = { address: 'ab'.repeat(32), memberCount: 5, meetings: 12, phase: 'Active' };
@@ -24,13 +24,18 @@ export function fakeSession() {
       listener?.(s);
       await wait(STEP);
     }
+    const id = Array.from({ length: 64 }, (_, i) => '0123456789abcdef'[(i * 7 + g.meetings) % 16]).join('');
+    listener?.('sent', id);
+    await wait(STEP * 2);
     listener?.('done');
-    return Array.from({ length: 64 }, (_, i) => '0123456789abcdef'[(i * 7 + g.meetings) % 16]).join('');
+    return id;
   };
 
   return {
     setup: { proverUri: 'http://localhost:6300', proverLocal: true, warnings: [] as string[] },
-    onStage: (f: ((s: Stage) => void) | undefined) => void (listener = f),
+    onStage: (f: StageListener | undefined) => void (listener = f),
+    leave: () => void (me = undefined),
+    noWalletMode: false,
     setFee: (relayUrl: string, letLacePay: boolean) => void (fee = { relayUrl: relayUrl.trim(), letLacePay }),
     get joined() {
       return !!me;

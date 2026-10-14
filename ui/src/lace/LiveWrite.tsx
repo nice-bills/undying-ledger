@@ -9,7 +9,8 @@
 // wallet at all. Also unit-tested with mocked providers (ui/src/lace/__tests__).
 import { useEffect, useRef, useState } from 'react';
 import { ZERO_ENTRY, type Entry } from '@undying-ledger/contract';
-import type { GroupView, LiveSession, Role, Stage } from './live-session';
+import { checkPin, lockFromPin, type Invite } from '@undying-ledger/chain/src/invite';
+import { LiveError, type GroupView, type LiveSession, type Role, type Stage } from './live-session';
 
 type Opened = { slot: number; shares: number; fund: number; loan: number; matches: boolean; meetings: number };
 type Busy = null | 'join' | 'record' | 'open' | 'stamp' | 'prove' | 'vote' | 'sunset';
@@ -23,18 +24,23 @@ const msgOf = (e: unknown) => {
   return a && !(e as { code?: string })?.code ? `Refused by the book: ${a[1].replace(/^failed assert:?\s*/i, '').replace(/\.$/, '')}.` : m;
 };
 
-export default function LiveWrite({ session, address, blockfrost }: { session: LiveSession; address: string; blockfrost: string }) {
-  const [role, setRole] = useState<Role>('member');
-  const [mySecret, setMySecret] = useState('');
-  const [groupSecret, setGroupSecret] = useState('');
-  const [slot, setSlot] = useState('0');
+export default function LiveWrite({ session, address, blockfrost, invite }: { session: LiveSession; address: string; blockfrost: string; invite?: Invite }) {
+  // An invite fills in who she is; "Not you?" or "Join as someone else" drops it for typed secrets.
+  const [useInvite, setUseInvite] = useState(!!invite);
+  const [role, setRole] = useState<Role>(invite?.role ?? 'member');
+  const [mySecret, setMySecret] = useState(invite?.mySecret ?? '');
+  const [groupSecret, setGroupSecret] = useState(invite?.groupSecret ?? '');
+  const [slot, setSlot] = useState(String(invite?.slot ?? 0));
+  const [lockKind, setLockKind] = useState<'pin' | 'long'>('pin');
+  const [pin, setPin] = useState('');
   const [passphrase, setPassphrase] = useState('');
   const [zk, setZk] = useState(defaultZk);
-  const [relay, setRelay] = useState(() => new URLSearchParams(location.hash.split('?')[1] ?? '').get('relay') ?? '');
+  const [relay, setRelay] = useState(() => invite?.relay ?? new URLSearchParams(location.hash.split('?')[1] ?? '').get('relay') ?? '');
   const [lacePays, setLacePays] = useState(false);
   const [group, setGroup] = useState<GroupView | null>(null);
   const [busy, setBusy] = useState<Busy>(null);
   const [stage, setStage] = useState<Stage | null>(null);
+  const [sentTx, setSentTx] = useState('');
   const [err, setErr] = useState('');
   const [errCode, setErrCode] = useState('');
   const [out, setOut] = useState('');
@@ -50,7 +56,10 @@ export default function LiveWrite({ session, address, blockfrost }: { session: L
   const prover = session.setup.proverUri;
 
   useEffect(() => {
-    session.onStage((s) => setStage(s === 'done' ? null : s));
+    session.onStage((s, txId) => {
+      if (s === 'sent') setSentTx(txId ?? '');
+      setStage(s === 'done' ? null : s);
+    });
     return () => session.onStage(undefined);
   }, [session]);
   useEffect(() => session.setFee(relay, lacePays), [session, relay, lacePays]);
@@ -66,6 +75,7 @@ export default function LiveWrite({ session, address, blockfrost }: { session: L
   const act = async (what: Exclude<Busy, null>, f: () => Promise<string | void>) => {
     if (busy) return;
     setBusy(what);
+    setSentTx('');
     setErr('');
     setErrCode('');
     setOut('');
@@ -85,15 +95,26 @@ export default function LiveWrite({ session, address, blockfrost }: { session: L
     }
   };
 
+  // The PIN becomes a long passbook lock (PBKDF2, salted with the contract and her own secret).
+  const lockFor = async (): Promise<string> => {
+    if (lockKind === 'long') return passphrase;
+    const bad = checkPin(pin);
+    if (bad) throw new LiveError('bad-input', bad);
+    const sec = mySecret.trim().replace(/^0x/i, '');
+    if (!/^[0-9a-f]{64}$/i.test(sec)) throw new LiveError('bad-input', `${role === 'secretary' ? 'The secretary secret' : 'Your member secret'} must be 64 hex characters (32 bytes), as printed in .preprod/group.json.`);
+    return lockFromPin(pin, address.trim().replace(/^0x/i, ''), sec);
+  };
+
   const join = () =>
     act('join', async () => {
+      const lock = await lockFor();
       const g = await session.attach({
         address,
         role,
         mySecretHex: mySecret,
         groupSecretHex: groupSecret,
         slot: Number(slot),
-        passphrase,
+        passphrase: lock,
         zkConfigBaseUrl: zk,
         blockfrostProjectId: blockfrost || undefined,
       });
@@ -159,6 +180,26 @@ export default function LiveWrite({ session, address, blockfrost }: { session: L
     setStanding({ secret, key: S.secretaryKeyFor(secret) });
   };
 
+  // Someone else on this phone: forget who joined (her passbook stays locked in this browser).
+  const leave = () => {
+    if (busy) return;
+    session.leave();
+    setGroup(null);
+    setUseInvite(false);
+    setMySecret('');
+    setGroupSecret('');
+    setSlot('0');
+    setPin('');
+    setPassphrase('');
+    setOpened(null);
+    setStamps([]);
+    setStamp('');
+    setStanding(null);
+    setCandidate('');
+    setErr('');
+    setOut('Left the group on this page. The passbook stays locked on this phone. Join as someone else below.');
+  };
+
   const sunset = () =>
     act('sunset', async () => {
       const r = await session.sunset();
@@ -176,6 +217,7 @@ export default function LiveWrite({ session, address, blockfrost }: { session: L
     balancing: noWallet ? 'Binding the call with a throwaway key' : relay ? 'Lace signs, the fee is left for the group key' : 'Lace balances and pays the fee',
     relay: 'The group fee key adds the fee',
     submitting: 'Lace submits to Preprod',
+    sent: 'On Preprod. Waiting for the indexer to show it',
     done: '',
   };
 
@@ -189,7 +231,13 @@ export default function LiveWrite({ session, address, blockfrost }: { session: L
       </div>
       <span className="skel" style={{ width: '86%' }} />
       <span className="skel" style={{ width: '60%' }} />
-      <p className="note">{noWallet ? 'The proof is made on this machine.' : 'The proof is made by the prover Lace points at.'} Nothing private goes to the relay.</p>
+      {stage === 'sent' && sentTx ? (
+        <p className="note" data-testid="sent">
+          Sent: Preprod has finalized tx <span className="hash">{sentTx.slice(0, 16)}</span>. The page updates once the indexer shows it.
+        </p>
+      ) : (
+        <p className="note">{noWallet ? 'The proof is made on this machine.' : 'The proof is made by the prover Lace points at.'} Nothing private goes to the relay.</p>
+      )}
     </div>
   );
 
@@ -229,39 +277,80 @@ export default function LiveWrite({ session, address, blockfrost }: { session: L
 
       {!group && (
         <>
-          <fieldset className="roles">
-            <legend className="label">I am</legend>
-            <label>
-              <input type="radio" name="role" checked={role === 'member'} onChange={() => setRole('member')} /> a member
-            </label>
-            <label>
-              <input type="radio" name="role" checked={role === 'secretary'} onChange={() => setRole('secretary')} /> the secretary
-            </label>
-          </fieldset>
-          <div className="prose">
-            <label className="label" htmlFor="mysec">
-              {role === 'secretary' ? 'Secretary secret' : 'My member secret'}
-            </label>
-            <input id="mysec" className="addr" type="password" value={mySecret} onChange={(ev) => setMySecret(ev.target.value)} autoComplete="off" spellCheck={false} />
-            <label className="label" htmlFor="gsec" style={{ display: 'block', marginTop: 10 }}>
-              Group secret
-            </label>
-            <input id="gsec" className="addr" type="password" value={groupSecret} onChange={(ev) => setGroupSecret(ev.target.value)} autoComplete="off" spellCheck={false} />
-            {role === 'member' && (
-              <>
-                <label className="label" htmlFor="slot" style={{ display: 'block', marginTop: 10 }}>
-                  My slot
+          {useInvite && invite ? (
+            <div className="prose" data-testid="invite-join">
+              <p className="note">
+                Joining as {invite.role === 'secretary' ? 'the secretary' : `the member in slot ${invite.slot}`}, from your invite.{' '}
+                <button type="button" className="linkish" onClick={() => (setUseInvite(false), setMySecret(''), setGroupSecret(''))}>
+                  Not you? Type the secrets instead
+                </button>
+              </p>
+            </div>
+          ) : (
+            <>
+              <fieldset className="roles">
+                <legend className="label">I am</legend>
+                <label>
+                  <input type="radio" name="role" checked={role === 'member'} onChange={() => setRole('member')} /> a member
                 </label>
-                <input id="slot" className="addr num" style={{ width: 88 }} inputMode="numeric" value={slot} onChange={(ev) => setSlot(ev.target.value.replace(/\D/g, '').slice(0, 2))} />
+                <label>
+                  <input type="radio" name="role" checked={role === 'secretary'} onChange={() => setRole('secretary')} /> the secretary
+                </label>
+              </fieldset>
+              <div className="prose">
+                <label className="label" htmlFor="mysec">
+                  {role === 'secretary' ? 'Secretary secret' : 'My member secret'}
+                </label>
+                <input id="mysec" className="addr" type="password" value={mySecret} onChange={(ev) => setMySecret(ev.target.value)} autoComplete="off" spellCheck={false} />
+                <label className="label" htmlFor="gsec" style={{ display: 'block', marginTop: 10 }}>
+                  Group secret
+                </label>
+                <input id="gsec" className="addr" type="password" value={groupSecret} onChange={(ev) => setGroupSecret(ev.target.value)} autoComplete="off" spellCheck={false} />
+                {role === 'member' && (
+                  <>
+                    <label className="label" htmlFor="slot" style={{ display: 'block', marginTop: 10 }}>
+                      My slot
+                    </label>
+                    <input id="slot" className="addr num" style={{ width: 88 }} inputMode="numeric" value={slot} onChange={(ev) => setSlot(ev.target.value.replace(/\D/g, '').slice(0, 2))} />
+                  </>
+                )}
+              </div>
+            </>
+          )}
+          <div className="prose">
+            {lockKind === 'pin' ? (
+              <>
+                <label className="label" htmlFor="pin" style={{ display: 'block', marginTop: 10 }}>
+                  6-digit PIN for this phone
+                </label>
+                <input
+                  id="pin"
+                  className="addr num pin"
+                  type="password"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={pin}
+                  onChange={(ev) => setPin(ev.target.value.replace(/\D/g, '').slice(0, 6))}
+                  autoComplete="off"
+                />
+                <p className="note" style={{ marginTop: 4 }}>
+                  Locks the passbook kept in this browser. Use the same PIN each time you join on this phone. The PIN works only together with your secret, so keep your invite private.
+                </p>
+              </>
+            ) : (
+              <>
+                <label className="label" htmlFor="pass" style={{ display: 'block', marginTop: 10 }}>
+                  Passbook lock for this phone
+                </label>
+                <input id="pass" className="addr" type="password" value={passphrase} onChange={(ev) => setPassphrase(ev.target.value)} autoComplete="new-password" />
+                <p className="note" style={{ marginTop: 4 }}>
+                  Encrypts the passbook kept in this browser. 16 characters or more, with three kinds of character.
+                </p>
               </>
             )}
-            <label className="label" htmlFor="pass" style={{ display: 'block', marginTop: 10 }}>
-              Passbook lock for this phone
-            </label>
-            <input id="pass" className="addr" type="password" value={passphrase} onChange={(ev) => setPassphrase(ev.target.value)} autoComplete="new-password" />
-            <p className="note" style={{ marginTop: 4 }}>
-              Encrypts the passbook kept in this browser. 16 characters or more, with three kinds of character.
-            </p>
+            <button type="button" className="linkish" onClick={() => setLockKind((k) => (k === 'pin' ? 'long' : 'pin'))}>
+              {lockKind === 'pin' ? 'Use a long lock instead' : 'Use a 6-digit PIN instead'}
+            </button>
             <label className="label" htmlFor="zk" style={{ display: 'block', marginTop: 10 }}>
               Proving keys URL
             </label>
@@ -291,6 +380,9 @@ export default function LiveWrite({ session, address, blockfrost }: { session: L
               <b>{group.phase}</b>
             </div>
           </div>
+          <button type="button" className="linkish" onClick={leave} disabled={!!busy} data-testid="leave">
+            Join as someone else
+          </button>
 
           {session.role === 'secretary' && (
             <>

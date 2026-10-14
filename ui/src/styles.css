@@ -276,6 +276,9 @@ a{color:inherit}
 .roles{border:0;margin:14px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:4px 22px}
 .roles legend{padding:0;margin-bottom:4px}
 .roles label{display:flex;align-items:center;gap:8px;min-height:44px;font-size:15px;cursor:pointer}
+.linkish{display:inline-flex;align-items:center;min-height:44px;padding:0;border:0;background:none;color:inherit;font:inherit;font-weight:700;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.addr.pin{width:9.5em;letter-spacing:.3em;font-size:20px}
+[data-testid=leave]{margin-top:6px}
 .sub3{font:800 26px/1.1 var(--disp);font-stretch:75%;margin-top:24px}
 .ledger.entry th{padding-right:6px}
 .ledger.entry td{height:48px;padding-right:6px}

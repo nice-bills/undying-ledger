@@ -43,7 +43,9 @@ import { LiveError, reasonOf } from './errors.js';
 import { burnerWallet } from './burner.js';
 
 export type FeeMode = { kind: 'wallet' } | { kind: 'group-fee-key'; relayUrl: string };
-export type Stage = 'proving' | 'balancing' | 'relay' | 'submitting' | 'done';
+/** 'sent': the relay (or Lace) handed the call to a Preprod node; what is left is waiting for its block. */
+export type Stage = 'proving' | 'balancing' | 'relay' | 'submitting' | 'sent' | 'done';
+export type StageListener = (s: Stage, txId?: string) => void;
 
 export const COMPATIBLE_CONNECTOR_API_VERSION = '4.x';
 export const LOCAL_PROVER = 'http://localhost:6300';
@@ -194,14 +196,14 @@ export type BuildOpts = {
   /** Read on every call, so the member can switch between relay and Lace-pays without re-joining. */
   feeMode: FeeMode | (() => FeeMode);
   blockfrostProjectId?: string;
-  onStage?: (s: Stage) => void;
+  onStage?: StageListener;
 };
 
 /** Midnight.js providers from an already connected Lace. Mirrors bboard's initializeProviders. */
 export async function buildProviders(opts: BuildOpts): Promise<UndyingProviders> {
   const { connected, config } = opts;
   const fee = (): FeeMode => (typeof opts.feeMode === 'function' ? opts.feeMode() : opts.feeMode);
-  const stage = (s: Stage) => opts.onStage?.(s);
+  const stage = (s: Stage, txId?: string) => opts.onStage?.(s, txId);
   if (!config.proverServerUri) throw new LiveError('no-prover', `Lace has no proof server set. Choose Local (${LOCAL_PROVER}) in Lace.`);
   const { indexer, indexerWS } = resolveIndexer(config, opts.blockfrostProjectId);
   const keyMaterialProvider = new FetchZkConfigProvider<UndyingCircuitKeys>(opts.zkConfigBaseUrl, fetch.bind(globalThis));
@@ -247,7 +249,9 @@ export async function buildProviders(opts: BuildOpts): Promise<UndyingProviders>
         const m = fee();
         if (m.kind === 'group-fee-key') {
           stage('relay');
-          return submitViaGroupFeeKey(m.relayUrl, tx);
+          const id = await submitViaGroupFeeKey(m.relayUrl, tx);
+          stage('sent', id);
+          return id;
         }
         stage('submitting');
         try {
@@ -255,7 +259,9 @@ export async function buildProviders(opts: BuildOpts): Promise<UndyingProviders>
         } catch (e) {
           throw new LiveError('lace-refused', `Lace did not submit the call: ${reasonOf(e)}`, { cause: e });
         }
-        return tx.identifiers()[0];
+        const id = tx.identifiers()[0];
+        stage('sent', id);
+        return id;
       },
     },
   } as UndyingProviders;
@@ -270,7 +276,7 @@ export type BurnerOpts = {
   privateStateProvider: PrivateStateProvider<PrivateStateId, UndyingPrivateState>;
   /** Read on every call; the burner path has no other way to pay. */
   relayUrl: () => string;
-  onStage?: (s: Stage) => void;
+  onStage?: StageListener;
 };
 
 /**
@@ -279,7 +285,7 @@ export type BurnerOpts = {
  * Nothing to install, no tokens, no wallet sync.
  */
 export function buildBurnerProviders(opts: BurnerOpts): UndyingProviders {
-  const stage = (s: Stage) => opts.onStage?.(s);
+  const stage = (s: Stage, txId?: string) => opts.onStage?.(s, txId);
   if (!opts.blockfrostProjectId?.trim()) {
     throw new LiveError('no-indexer', 'Without a wallet the page needs a Blockfrost Midnight Preprod project ID to read the book. Paste it above.');
   }
@@ -310,7 +316,9 @@ export function buildBurnerProviders(opts: BurnerOpts): UndyingProviders {
         const relayUrl = opts.relayUrl();
         if (!relayUrl) throw new LiveError('fee-choice-needed', 'Without a wallet, the group fee-key relay pays every fee. Give its URL above.');
         stage('relay');
-        return submitViaGroupFeeKey(relayUrl, tx);
+        const id = await submitViaGroupFeeKey(relayUrl, tx);
+        stage('sent', id);
+        return id;
       },
     },
   } as UndyingProviders;

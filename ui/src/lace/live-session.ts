@@ -27,13 +27,14 @@ import {
   type FeeMode,
   type LaceSetup,
   type Stage,
+  type StageListener,
 } from '@undying-ledger/chain/src/browser';
 import { UndyingAPI, type OpenedPassbook } from '@undying-ledger/chain/src/api';
 import type { UndyingProviders } from '@undying-ledger/chain/src/common';
 import { LiveError } from '@undying-ledger/chain/src/errors';
 
 export { LiveError, isLiveError } from '@undying-ledger/chain/src/errors';
-export type { Stage } from '@undying-ledger/chain/src/browser';
+export type { Stage, StageListener } from '@undying-ledger/chain/src/browser';
 
 export const NETWORK = 'preprod';
 export const MAX_SLOT = 29; // groups of up to 30
@@ -85,7 +86,7 @@ const view = (address: string, L: Ledger): GroupView => ({
 
 export class LiveSession {
   private fee: { relayUrl: string; letLacePay: boolean } = { relayUrl: '', letLacePay: false };
-  private stageListener: ((s: Stage) => void) | undefined;
+  private stageListener: StageListener | undefined;
   private providers: UndyingProviders | undefined;
   /** What the providers were built with: a new passbook lock (or burner account) rebuilds them. */
   private providersFor: string | undefined;
@@ -125,7 +126,7 @@ export class LiveSession {
     return toHex(roleKey(DOMAINS.secretary, hex32(secretHex, 'The secretary secret')));
   }
 
-  onStage(f: ((s: Stage) => void) | undefined) {
+  onStage(f: StageListener | undefined) {
     this.stageListener = f;
   }
 
@@ -171,7 +172,7 @@ export class LiveSession {
     if (!o.passphrase) throw new LiveError('bad-input', 'Choose a passphrase to lock your passbook on this phone.');
     checkPassphrase(o.passphrase);
 
-    const onStage = (s: Stage) => this.stageListener?.(s);
+    const onStage = (s: Stage, txId?: string) => this.stageListener?.(s, txId);
     // No wallet address to scope the stored passbook to: use this device's public role key,
     // so the same secret finds the same passbook after a reload.
     const account = this.source.kind === 'lace' ? 'lace' : toHex(roleKey(o.role === 'secretary' ? DOMAINS.secretary : DOMAINS.member, mySecret));
@@ -233,6 +234,15 @@ export class LiveSession {
     this.api = api;
     this.me = { role: o.role, slot, groupSecret };
     return view(api.address, L);
+  }
+
+  /**
+   * Leave the group on this page, so someone else can join on the same phone. Her passbook stays
+   * in this browser, locked with her PIN or lock; it opens again when she joins with her secret.
+   */
+  leave() {
+    this.api = undefined;
+    this.me = undefined;
   }
 
   private need(): UndyingAPI {

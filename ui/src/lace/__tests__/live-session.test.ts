@@ -466,7 +466,7 @@ describe('secretary records a meeting', () => {
     const s = await LiveSession.connect('preprod', 50);
     await join(s);
     const stages: string[] = [];
-    s.onStage((x) => stages.push(x));
+    s.onStage((x, id) => stages.push(id ? `${x}:${id}` : x));
     s.setFee('http://localhost:3001', false);
     const stamps = await s.recordMeeting(entries());
 
@@ -479,7 +479,7 @@ describe('secretary records a meeting', () => {
     const [url, init] = fetchMock.mock.calls[0];
     expect(String(url)).toBe('http://localhost:3001/sponsor');
     expect(JSON.parse(init.body)).toEqual({ tx: '010203beef' });
-    expect(stages).toEqual(['proving', 'balancing', 'relay', 'done']);
+    expect(stages).toEqual(['proving', 'balancing', 'relay', 'sent:relay-tx-1', 'done']); // 'sent' as soon as the relay answers
     expect(stamps).toEqual(['undying-stamp:0:3:1:0', 'undying-stamp:1:2:0:50', 'undying-stamp:2:0:0:0']);
     expect(chain.meetings).toBe(1);
     // each stamp opens its slot's new sealed line (real pure circuit), so members can keep it
@@ -607,6 +607,19 @@ describe('member: own passbook, stamps, proof; anyone: sunset', () => {
     expect((await s.group()).phase).toBe('Sunset');
   });
 
+  it('join as someone else: leave forgets who joined, and the next person joins on the same page', async () => {
+    makeLace();
+    const s = await LiveSession.connect('preprod', 50);
+    await join(s, 'member', 1);
+    s.leave();
+    expect(s.joined).toBe(false);
+    expect(s.role).toBeUndefined();
+    await expect(s.openPassbook()).rejects.toThrow('Join the group first');
+    await join(s, 'member', 2);
+    expect(s.slot).toBe(2);
+    expect((await s.openPassbook()).slot).toBe(2);
+  });
+
   it('nothing works before joining', async () => {
     makeLace();
     const s = await LiveSession.connect('preprod', 50);
@@ -650,7 +663,7 @@ describe('no wallet: burner key and the group fee-key relay', () => {
     const [url, init] = fetchMock.mock.calls[0];
     expect(String(url)).toBe('http://localhost:3001/sponsor');
     expect(JSON.parse(init.body).tx).toBe('010203');
-    expect(stages).toEqual(['proving', 'balancing', 'relay', 'done']);
+    expect(stages).toEqual(['proving', 'balancing', 'relay', 'sent', 'done']);
     expect(h.proofUrls).toContain('http://localhost:6300');
     expect(h.indexerUrls.at(-1)?.[0]).toBe('https://midnight-preprod.blockfrost.io/api/v0?project_id=nightpreprodX');
     // the stored passbook is scoped to the member's public key, so a reload finds it again
