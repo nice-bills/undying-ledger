@@ -72,6 +72,7 @@ Pinned versions (Preprod support matrix, 9 Oct 2026): Compact 0.31.1, compact-ru
 **Done and verified in the cloud session**
 - 66 unit tests (72 since the Lace run), typecheck, e2e passed / 2 agentic skipped at 390 and 430 (e2e needs Node >= 22.22.3; the container has 22.22.0, so a Node 24 tarball was used).
 - UI rebuilt as the cash box (owner's choice); launch video `media/launch-wide.mp4` and `-tall.mp4` (57 s, opens on the landing, `media/launch/make.sh`, ends on the Preprod record in `#/live`); demo.mp4 and the narrated cut (82 s; narration re-timed to the new beats). All re-rendered after the measurement, so receipts show 1 SPECK.
+- Demo step rail (14 Oct): Back / Next pills, "Step N of 6" with the step name, six bars (done, current in saffron); the bare 1 to 6 numbers confused the owner. Rendered at 390 and 430.
 - Proving keys ship in `docs/zk/` so `#/live` can prove from Pages.
 
 **Container notes (cloud)**
@@ -82,7 +83,7 @@ Pinned versions (Preprod support matrix, 9 Oct 2026): Compact 0.31.1, compact-ru
 
 **Next steps, in order**
 1. Done 13 Oct: Lace `payFees:false` on the owner's laptop (see above). Next, if the owner agrees: the member UX items listed under "Lace on Preprod".
-2. Deck (Google Slides "Undying Ledger - AKINDO Midnight Buildathon", owner's Drive): slides 9, 12, 13 and 14 updated in place on 12 Oct to the Preprod run (1 SPECK fee, 5 calls by a 0-DUST caller, verified vs not-yet-verified split; heartbeat moved to verified); slides 1, 12, 13, 14 updated again on 13 Oct for v2 (9 circuits, 66 tests, 14 member calls at 0 DUST, no-wallet from a browser verified). Re-check after the Lace test: Lace moved to verified on 13 Oct (2 calls, 0 tDUST); the deck has not been updated for it yet.
+2. Deck (Google Slides "Undying Ledger - AKINDO Midnight Buildathon", owner's Drive): slides 9, 12, 13 and 14 updated in place on 12 Oct to the Preprod run (1 SPECK fee, 5 calls by a 0-DUST caller, verified vs not-yet-verified split; heartbeat moved to verified); slides 1, 12, 13, 14 updated again on 13 Oct for v2 (9 circuits, 66 tests, 14 member calls at 0 DUST, no-wallet from a browser verified). Updated again on 13 Oct after the Lace run: slide 12 (72 tests, 16 member calls), slide 13 (Lace on Preprod moved to verified; Lace on phones and other browsers, and a wallet that refuses payFees:false, still not verified), slide 14 (Wave 3: a pilot group, Mainnet fee).
 3. The owner submits on AKINDO personally. **Do not submit, post publicly, or spend money without the owner's explicit yes.** Aim for 17 Oct.
 
 ## Design rules (the owner's standing rules; do not drift)

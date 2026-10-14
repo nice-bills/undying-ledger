@@ -206,14 +206,26 @@ export default function App() {
           </section>
         ))}
         <nav className="rail" aria-label="Demo steps">
-          <p className="rail-label" aria-hidden="true">
-            {LABELS[cur]}
-          </p>
-          <ol>
+          <div className="rail-head">
+            <button type="button" className="rail-nav" onClick={() => go(cur - 1)} disabled={cur === 0} aria-label="Previous step">
+              Back
+            </button>
+            <p className="rail-label">
+              <span className="num">
+                Step {cur + 1} of {LABELS.length}
+              </span>
+              <b>{LABELS[cur]}</b>
+            </p>
+            <button type="button" className="rail-nav" onClick={() => go(cur + 1)} disabled={cur === LABELS.length - 1} aria-label="Next step">
+              Next
+            </button>
+          </div>
+          {/* where you are in the story; each part also jumps to its step */}
+          <ol className="rail-steps">
             {LABELS.map((l, i) => (
               <li key={i}>
-                <button type="button" aria-label={`Step ${i + 1}: ${l}`} aria-current={i === cur ? 'step' : 'false'} onClick={() => go(i)}>
-                  {i + 1}
+                <button type="button" aria-label={`Step ${i + 1}: ${l}`} aria-current={i === cur ? 'step' : 'false'} data-done={i < cur ? '' : undefined} onClick={() => go(i)}>
+                  <i aria-hidden="true" />
                 </button>
               </li>
             ))}

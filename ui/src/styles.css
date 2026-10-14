@@ -23,7 +23,7 @@ a{color:inherit}
 .ced{display:inline}
 
 :root{
-  --rail-h:124px;
+  --rail-h:142px;
   --sans:'Schibsted Grotesk',system-ui,sans-serif; --disp:'Archivo','Schibsted Grotesk',sans-serif;
   --hero-xl:164px; --hero-l:104px;
   --emerald:#0E5A43; --emerald-2:#0A4434; --saffron:#F4B23A; --saffron-2:#E59E22; --saffron-3:#D88E17;
@@ -288,12 +288,21 @@ a{color:inherit}
 
 /* the rail: the six steps of the story */
 .rail{position:absolute;left:0;right:0;bottom:0;height:calc(var(--rail-h) + env(safe-area-inset-bottom,0px));padding:10px 14px calc(4px + env(safe-area-inset-bottom,0px));background:#08130F;z-index:60;--focus:var(--saffron)}
-.rail-label{font:600 13px var(--sans);color:#BFD8CC;margin:0 0 8px;height:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rail ol{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
-.rail button{width:100%;height:44px;border-radius:14px;background:#15241F;color:#DCE7E1;font:850 22px/1 var(--disp);font-stretch:62%;transition:background-color 240ms,color 240ms,transform 140ms cubic-bezier(.23,1,.32,1)}
-.rail button[aria-current=step]{background:var(--saffron);color:#10261E}
+.rail-head{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;height:50px}
+.rail-label{margin:0;min-width:0;text-align:center;line-height:1.2}
+.rail-label span{display:block;font:600 12px var(--sans);color:#9DB2A8}
+.rail-label b{display:block;font:700 14px/1.2 var(--sans);color:#F2ECDD;text-wrap:balance;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rail-nav{height:44px;min-width:64px;padding:0 14px;border-radius:999px;background:#15241F;color:#DCE7E1;font:700 14px var(--sans)}
+.rail-nav:disabled{opacity:.35;cursor:default}
+.rail-nav:not(:disabled):active{transform:scale(.97)}
+.rail-steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.rail-steps button{position:relative;width:100%;height:30px;display:flex;align-items:center;padding:0}
+.rail-steps button::after{content:'';position:absolute;inset:-7px 0}
+.rail-steps i{display:block;width:100%;height:6px;border-radius:3px;background:#2A3A34;transition:background-color 240ms}
+.rail-steps button[data-done] i{background:#5E8C78}
+.rail-steps button[aria-current=step] i{background:var(--saffron)}
 .rail .foot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:4px;font:500 12px/1.2 var(--sans);color:#9DB2A8}
-.rail .foot .legal{display:flex;gap:14px}
+.rail .foot .legal{display:flex;gap:14px;white-space:nowrap}
 .rail .foot a{color:#DCE7E1;text-decoration:underline;text-underline-offset:2px;display:inline-flex;align-items:center;min-height:44px}
 
 @media (min-width:420px){:root{--hero-xl:176px}}
